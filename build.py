@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Erzeugt die statischen Seiten aus src/<lang>/*.html. Aufruf: python3 build.py"""
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 SITE = "https://leotio.com"
+VERSION = time.strftime("%Y%m%d%H%M")  # gegen Browser-Cache der CSS
 
 # Seiten-Schlüssel -> (Pfad, Titel) je Sprache. EN liegt im Root, DE unter /de/.
 PAGES = {
@@ -50,7 +52,7 @@ def render(key: str, lang: str) -> str:
   <link rel="alternate" hreflang="de" href="{SITE}/{PAGES[key]['de'][0]}">
   <link rel="alternate" hreflang="x-default" href="{SITE}/{PAGES[key]['en'][0]}">
   <link rel="preload" href="{r('assets/fonts/fraunces.woff2')}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{r('assets/style.css')}">
+  <link rel="stylesheet" href="{r('assets/style.css')}?v={VERSION}">
   <link rel="icon" href="{r('assets/favicon.svg')}" type="image/svg+xml">
 </head>
 <body>
