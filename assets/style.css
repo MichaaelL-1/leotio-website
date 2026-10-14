@@ -68,4 +68,10 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: s
 footer nav { display: flex; gap: 22px; }
 footer a { text-decoration: none; }
 footer a:hover { color: var(--ink); }
-footer .sep { width: 1px; background: var(--line); align-self: stretch; }
+
+/* Sprachumschalter oben rechts */
+.lang { position: absolute; top: 28px; right: 24px; display: flex; gap: 4px; font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .1em; z-index: 1; }
+.lang a { padding: 6px 8px; color: var(--muted); text-decoration: none; border-radius: 6px; }
+.lang a:hover { color: var(--ink); }
+.lang a[aria-current] { color: var(--ink); pointer-events: none; }
+.lang a + a::before { content: ""; }

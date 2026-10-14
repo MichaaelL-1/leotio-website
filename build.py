@@ -34,7 +34,10 @@ def render(key: str, lang: str) -> str:
         f'  <header><div class="wrap"><a class="mark" href="{r(PAGES["home"][lang][0])}">'
         f'leotio<span class="dot">.</span></a></div></header>\n')
     nav = "".join(f'<a href="{r(PAGES[k][lang][0])}">{LABELS[lang][k]}</a>' for k in ("support", "privacy", "imprint"))
-    switch = f'<a href="{r(PAGES[key][other][0])}" hreflang="{other}" lang="{other}">{"Deutsch" if other == "de" else "English"}</a>'
+    href = {lang: r(PAGES[key][lang][0]), other: r(PAGES[key][other][0])}
+    switch = '  <nav class="lang" aria-label="Language">' + "".join(
+        f'<a href="{href[l]}" hreflang="{l}" lang="{l}"' + (' aria-current="true"' if l == lang else "") + f'>{l.upper()}</a>'
+        for l in ("en", "de")) + "</nav>\n"
     return f"""<!doctype html>
 <html lang="{lang}">
 <head>
@@ -51,13 +54,13 @@ def render(key: str, lang: str) -> str:
   <link rel="icon" href="{r('assets/favicon.svg')}" type="image/svg+xml">
 </head>
 <body>
-{header}  <main>
+{switch}{header}  <main>
 {body}
   </main>
   <footer>
     <div class="wrap">
       <span>© 2026 Leotio GmbH</span>
-      <nav>{nav}<span class="sep" aria-hidden="true"></span>{switch}</nav>
+      <nav>{nav}</nav>
     </div>
   </footer>
 </body>
@@ -79,7 +82,7 @@ def main():
         .replace('href="./', 'href="/').replace("<title>Leotio</title>", "<title>Not found – Leotio</title>")
         .replace('href="assets/', 'href="/assets/').replace('href="support/', 'href="/support/')
         .replace('href="privacy/', 'href="/privacy/').replace('href="imprint/', 'href="/imprint/')
-        .replace('href="de/"', 'href="/de/"'))
+        .replace('href="de/"', 'href="/de/"').replace('href="./"', 'href="/"'))
 
 
 if __name__ == "__main__":
