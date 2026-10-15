@@ -5,17 +5,19 @@
 @font-face { font-family: "Fraunces"; font-style: italic; src: url("fonts/fraunces-italic-ext.woff2") format("woff2"); font-weight: 100 900; font-display: swap; unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+2020,U+2113,U+A720-A7FF; }
 @font-face { font-family: "Inter"; src: url("fonts/inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 
+/* Design System Leotio: Graphit & Kalk */
 :root {
-  --bg: #f7f4ee;
-  --ink: #1b1a18;
-  --muted: #6e695f;
-  --line: #e3ddd1;
-  --accent: #c8912e;
+  --bg: #fafaf9;
+  --bg-2: #e4e6e3;
+  --ink: #202225;
+  --muted: #5a6068;
+  --line: #d9dcd9;
+  --accent: #a9704e;
   --serif: "Fraunces", Georgia, "Times New Roman", serif;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #131210; --ink: #efebe3; --muted: #9c968b; --line: #2a2824; --accent: #e2ac4f; }
+  :root { --bg: #202225; --bg-2: #3c4148; --ink: #fafaf9; --muted: #b3b8bf; --line: #3c4148; --accent: #c48a66; }
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -29,10 +31,8 @@ a { color: inherit; text-decoration-color: var(--line); text-underline-offset: 4
 a:hover { text-decoration-color: var(--accent); }
 .wrap { width: 100%; max-width: 680px; margin: 0 auto; padding: 0 24px; }
 
-/* Wortmarke */
-.mark { font-family: var(--serif); font-weight: 400; font-variation-settings: "opsz" 144, "SOFT" 50;
-  letter-spacing: -0.03em; text-decoration: none; }
-.mark .dot { color: var(--accent); }
+/* Logo: Kombination als Inline-SVG, erbt die Tintenfarbe */
+.logo { display: block; width: clamp(220px, 56vw, 480px); height: auto; color: var(--ink); }
 
 header { padding: 32px 0; }
 header .mark { font-size: 28px; }
@@ -41,8 +41,7 @@ main { flex: 1; }
 
 /* Startseite */
 .home { display: flex; flex-direction: column; justify-content: center; min-height: 62vh; }
-.home h1 { font-family: var(--serif); font-weight: 300; font-variation-settings: "opsz" 144, "SOFT" 50;
-  font-size: clamp(64px, 16vw, 132px); line-height: .95; letter-spacing: -0.045em; margin: 0 0 28px; }
+.home h1 { margin: 0 0 44px; }
 /* Wörterbucheintrag */
 .entry { margin: 0; max-width: 30em; font-family: var(--serif); font-variation-settings: "opsz" 24; }
 .entry dt { font-size: 20px; color: var(--ink); margin-bottom: 6px; }
@@ -61,7 +60,7 @@ main { flex: 1; }
 .page h2 { font-size: 13px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
   color: var(--muted); margin: 36px 0 8px; }
 .page p { margin: 0 0 12px; }
-.todo { background: color-mix(in srgb, var(--accent) 28%, transparent); padding: 0 4px; border-radius: 3px; }
+.todo { background: var(--bg-2); padding: 0 4px; }
 
 footer { border-top: 1px solid var(--line); padding: 24px 0 36px; font-size: 14px; color: var(--muted); }
 footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; }
@@ -71,14 +70,14 @@ footer a:hover { color: var(--ink); }
 footer .sep { width: 1px; background: var(--line); align-self: stretch; }
 
 /* Coming soon */
-.soon { margin-top: 40px; font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.soon { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); max-width: 30em; font-family: var(--sans); font-size: 13px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .soon a { color: var(--muted); font-weight: 500; margin-left: 14px; text-decoration: none; }
 .soon a:hover { color: var(--ink); }
 .home { min-height: 100vh; min-height: 100svh; padding-top: 48px; padding-bottom: 72px; }
 
 /* Sprachumschalter oben rechts */
-.lang { position: absolute; top: 28px; right: 24px; display: flex; gap: 4px; font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .1em; z-index: 1; }
-.lang a { padding: 6px 8px; color: var(--muted); text-decoration: none; border-radius: 6px; }
+.lang { position: absolute; top: 28px; right: 24px; display: flex; gap: 4px; font-family: var(--sans); font-size: 13px; font-weight: 500; letter-spacing: .1em; z-index: 1; }
+.lang a { padding: 6px 8px; color: var(--muted); text-decoration: none; }
 .lang a:hover { color: var(--ink); }
 .lang a[aria-current] { color: var(--ink); pointer-events: none; }
 .lang a + a::before { content: ""; }
