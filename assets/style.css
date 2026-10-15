@@ -22,62 +22,46 @@
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+  margin: 0; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column;
   background: var(--bg); color: var(--ink);
-  font: 400 16px/1.65 var(--sans); font-feature-settings: "ss01", "cv11";
+  font: 400 16px/1.6 var(--sans); font-feature-settings: "ss01", "cv11";
   -webkit-font-smoothing: antialiased;
 }
-a { color: inherit; text-decoration-color: var(--line); text-underline-offset: 4px; transition: text-decoration-color .2s; }
-a:hover { text-decoration-color: var(--accent); }
-.wrap { width: 100%; max-width: 680px; margin: 0 auto; padding: 0 24px; }
+a { color: inherit; text-decoration: none; }
+.wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
 
-/* Logo: Kombination als Inline-SVG, erbt die Tintenfarbe */
-.logo { display: block; width: clamp(220px, 56vw, 480px); height: auto; color: var(--ink); }
-
-header { padding: 32px 0; }
-header .mark { font-size: 28px; }
-
-main { flex: 1; }
-
-/* Startseite */
-.home { display: flex; flex-direction: column; justify-content: center; min-height: 62vh; }
-.home h1 { margin: 0 0 44px; }
-/* Wörterbucheintrag */
-.entry { margin: 0; max-width: 30em; font-family: var(--serif); font-variation-settings: "opsz" 24; }
-.entry dt { font-size: 20px; color: var(--ink); margin-bottom: 6px; }
-.entry dt .syl { font-weight: 500; letter-spacing: .01em; }
-.entry dt .pos, .entry dt .ipa { font-style: italic; color: var(--muted); font-weight: 300; margin-left: 10px; }
-.entry dd { margin: 0; font-size: 18px; line-height: 1.55; color: var(--muted); font-weight: 300; }
-.entry dd + dd { margin-top: 4px; }
-.entry .ety { font-style: italic; }
-.entry .ety b { font-weight: 500; font-style: normal; color: var(--ink); font-variant-ligatures: none; }
-.entry .n { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--accent); display: inline-block; width: 16px; font-variant-numeric: tabular-nums; vertical-align: 2px; }
-
-/* Textseiten */
-.page { padding-top: 24px; padding-bottom: 72px; }
-.page h1 { font-family: var(--serif); font-weight: 350; font-variation-settings: "opsz" 96;
-  font-size: clamp(38px, 8vw, 52px); letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 32px; }
-.page h2 { font-size: 13px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
-  color: var(--muted); margin: 36px 0 8px; }
-.page p { margin: 0 0 12px; }
-.todo { background: var(--bg-2); padding: 0 4px; }
-
-footer { border-top: 1px solid var(--line); padding: 24px 0 36px; font-size: 14px; color: var(--muted); }
-footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; }
-footer nav { display: flex; gap: 22px; }
-footer a { text-decoration: none; }
-footer a:hover { color: var(--ink); }
-footer .sep { width: 1px; background: var(--line); align-self: stretch; }
-
-/* Coming soon */
-.soon { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); max-width: 30em; font-family: var(--sans); font-size: 13px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.soon a { color: var(--muted); font-weight: 500; margin-left: 14px; text-decoration: none; }
-.soon a:hover { color: var(--ink); }
-.home { min-height: 100vh; min-height: 100svh; padding-top: 48px; padding-bottom: 72px; }
-
-/* Sprachumschalter oben rechts */
-.lang { position: absolute; top: 28px; right: 24px; display: flex; gap: 4px; font-family: var(--sans); font-size: 13px; font-weight: 500; letter-spacing: .1em; z-index: 1; }
-.lang a { padding: 6px 8px; color: var(--muted); text-decoration: none; }
+/* Kopf: Kombination 22 px links, Sprache rechts */
+.top { display: flex; align-items: center; justify-content: space-between; padding-top: 28px; padding-bottom: 28px; }
+.logo { display: block; height: 22px; width: auto; color: var(--ink); }
+.lang { display: flex; gap: 4px; font-size: 13px; font-weight: 500; letter-spacing: .1em; }
+.lang a { padding: 6px 8px; color: var(--muted); }
 .lang a:hover { color: var(--ink); }
 .lang a[aria-current] { color: var(--ink); pointer-events: none; }
-.lang a + a::before { content: ""; }
+
+/* Bühne: Wörterbucheintrag links, Zeichen rechts */
+.hero { flex: 1; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: center; gap: 48px; padding-top: 32px; padding-bottom: 64px; }
+.head { font-family: var(--serif); font-weight: 300; font-variation-settings: "opsz" 144, "SOFT" 50;
+  font-size: clamp(56px, 9vw, 104px); line-height: 1; letter-spacing: -0.03em; margin: 0 0 20px; }
+.entry { margin: 0; max-width: 26em; font-family: var(--serif); font-variation-settings: "opsz" 24; }
+.entry dt { font-size: 18px; margin-bottom: 12px; }
+.entry dt .pos { font-style: italic; color: var(--muted); font-weight: 300; }
+.entry dd { margin: 0; font-size: 20px; line-height: 1.5; color: var(--muted); font-weight: 300; }
+.entry dd + dd { margin-top: 6px; }
+.entry .ety { font-style: italic; margin-bottom: 10px; }
+.entry .ety b { font-weight: 500; font-style: normal; color: var(--ink); font-variant-ligatures: none; }
+.entry .n { font-family: var(--sans); font-size: 12px; font-weight: 500; color: var(--accent); display: inline-block; width: 18px; font-variant-numeric: tabular-nums; vertical-align: 3px; }
+.soon { margin: 40px 0 0; padding-top: 16px; border-top: 1px solid var(--line); max-width: 26em;
+  font-size: 13px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.figure { display: flex; justify-content: flex-end; }
+.zeichen { display: block; width: clamp(140px, 20vw, 240px); height: auto; color: var(--ink); }
+
+/* Fuß */
+.foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 20px; padding-bottom: 32px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.foot a:hover { color: var(--ink); }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; gap: 40px; padding-top: 24px; padding-bottom: 48px; }
+  .figure { justify-content: flex-start; order: -1; }
+  .zeichen { width: 96px; }
+  .head { margin-bottom: 16px; }
+}
