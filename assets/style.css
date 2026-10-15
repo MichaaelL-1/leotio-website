@@ -55,9 +55,24 @@ a { color: inherit; text-decoration: none; }
 .figure { display: flex; justify-content: flex-end; }
 .zeichen { display: block; width: clamp(140px, 20vw, 240px); height: auto; color: var(--ink); }
 
+/* Textseiten: Support, Datenschutz */
+.page { flex: 1; max-width: 720px; margin-left: auto; margin-right: auto; padding-top: 24px; padding-bottom: 64px; }
+.page h1 { font-family: var(--serif); font-weight: 300; font-variation-settings: "opsz" 144, "SOFT" 50; font-size: clamp(40px, 6vw, 56px); line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 20px; }
+.page h2 { font-family: var(--serif); font-weight: 400; font-variation-settings: "opsz" 36; font-size: 22px; line-height: 1.3; margin: 40px 0 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+.page h3 { font-size: 15px; font-weight: 600; margin: 24px 0 4px; }
+.page p, .page li { color: var(--muted); }
+.page p { margin: 0 0 12px; }
+.page ul { margin: 0 0 12px; padding-left: 20px; }
+.page li + li { margin-top: 6px; }
+.page b { color: var(--ink); font-weight: 600; }
+.page a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.page .lead { font-family: var(--serif); font-variation-settings: "opsz" 24; font-weight: 300; font-size: 20px; line-height: 1.5; color: var(--ink); }
+.page .meta { margin-top: 32px; font-size: 13px; }
+
 /* Fuß */
 .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 20px; padding-bottom: 32px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .foot a:hover { color: var(--ink); }
+.foot .links { display: flex; gap: 16px; flex-wrap: wrap; }
 
 @media (max-width: 760px) {
   .hero { grid-template-columns: 1fr; gap: 40px; padding-top: 24px; padding-bottom: 48px; }
