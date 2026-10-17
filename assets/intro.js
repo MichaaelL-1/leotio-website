@@ -2,7 +2,7 @@
    Ein Lichtpunkt zieht das Quadrat, ein Zirkel konstruiert den Eckpunkt des L (Teilung 1 : √2),
    der Lichtpunkt zieht das L, dann wandert das Zeichen in die Kopfzeile und der Name erscheint.
    Läuft einmal pro Sitzung, nicht bei „Bewegung reduzieren“, Klick oder Taste überspringt.
-   Erneut: Klick auf das große Zeichen der Startseite (beim Darüberfahren zeigt es seine Hilfslinien) oder Adresse #intro. */
+   Erneut: Klick auf das Logo der Kopfzeile oder das große Zeichen (beim Darüberfahren zeigt es seine Hilfslinien) oder Adresse #intro. */
 (function () {
   var root = document.documentElement, NS = 'http://www.w3.org/2000/svg', running = false;
   var logo = document.querySelector('.top .logo');
@@ -25,6 +25,12 @@
     fig.addEventListener('click', function () { if (!running) { window.scrollTo(0, 0); run(); } });
     fig.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && !running) { e.preventDefault(); e.stopPropagation(); run(); } });
   }
+  // Logo in der Kopfzeile: auf der Startseite spielt ein Klick die Animation statt neu zu laden
+  var home = document.querySelector('.top .home-link');
+  if (home && !reduce) home.addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault(); if (!running) { window.scrollTo(0, 0); run(); }
+  });
   if (location.hash === '#intro' && !reduce) root.classList.add('intro');
   if (root.classList.contains('intro')) run();
 
