@@ -96,8 +96,7 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 760px) {
   .hero { grid-template-columns: 1fr; gap: 40px; padding-top: 24px; padding-bottom: 48px; }
-  .figure { justify-content: flex-end; }
-  .zeichen { width: 120px; }
+  .figure { display: none; }
   .head { margin-bottom: 16px; }
 }
 
