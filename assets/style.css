@@ -100,3 +100,12 @@ a { color: inherit; text-decoration: none; }
   .zeichen { width: 96px; }
   .head { margin-bottom: 16px; }
 }
+
+/* Lade-Animation Startseite (assets/intro.js). Ohne JS oder nach 7 s ist alles sichtbar. */
+.intro .top .logo > *, .intro .lang, .intro .hero, .intro footer { opacity: 0; animation: intro-fallback .01s 7s forwards; }
+@keyframes intro-fallback { to { opacity: 1; } }
+.intro-stage { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: var(--bg); cursor: pointer; }
+.intro-stage svg { width: min(62vmin, 380px); height: auto; color: var(--ink); overflow: visible; }
+.intro-stage .i-guide { fill: none; stroke: var(--muted); stroke-width: .8; vector-effect: non-scaling-stroke; opacity: 0; }
+.intro-stage .i-pin { fill: var(--muted); opacity: 0; }
+.intro-stage .i-dot { fill: #fff8f0; opacity: 0; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--accent)) drop-shadow(0 0 14px var(--accent)); }
