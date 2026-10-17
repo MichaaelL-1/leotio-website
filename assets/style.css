@@ -115,3 +115,9 @@ a { color: inherit; text-decoration: none; }
 .z-hint { fill: none; stroke: var(--muted); stroke-width: .8; vector-effect: non-scaling-stroke; opacity: 0; transition: opacity .5s ease; }
 .z-play:hover .z-hint, .z-play:focus-visible .z-hint { opacity: .55; }
 @media (hover: none) { .z-hint { display: none; } }
+
+/* Großes Zeichen als Blindprägung: kaum dunkler als der Grund, oben Schatten, unten Lichtkante */
+:root { --praeg-fill: #f3f3f1; --praeg-shadow: .16; --praeg-light: rgba(255,255,255,.95); }
+@media (prefers-color-scheme: dark) { :root { --praeg-fill: #17181b; --praeg-shadow: .7; --praeg-light: rgba(255,255,255,.13); } }
+.zeichen { width: clamp(160px, 24vw, 300px); color: var(--praeg-fill); filter: url(#praegung) drop-shadow(0 1px 0 var(--praeg-light)); }
+.praegung-schatten { flood-color: #000; flood-opacity: var(--praeg-shadow); }
