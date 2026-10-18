@@ -101,7 +101,10 @@
     show(pin, c0); show(rad, c0);
     rad.style.transformBox = 'view-box'; rad.style.transformOrigin = A + 'px 0px';
     an(rad, [{ transform: 'rotate(0deg)' }, { transform: 'rotate(45deg)' }], { duration: 800, delay: c0 + 200, fill: 'both', easing: ease });
-    var L = arc.getTotalLength(); arc.style.strokeDasharray = L; show(arc, c0 + 200, 1);
+    // Strichlänge in SVG-Einheiten: ohne non-scaling-stroke, Linienstärke passend zur Bühne umgerechnet
+    var k = svg.getBoundingClientRect().width / (A + 2 * PAD) || 1;
+    arc.style.vectorEffect = 'none'; arc.style.strokeWidth = .8 / k;
+    var L = arc.getTotalLength(); arc.style.strokeDasharray = L + ' ' + L; show(arc, c0 + 200, 1);
     an(arc, [{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: 800, delay: c0 + 200, fill: 'both', easing: ease });
     mark.style.transformBox = 'fill-box'; mark.style.transformOrigin = 'center'; show(mark, c0 + 1000, 1);
     an(mark, [{ transform: 'scale(2.5)' }, { transform: 'scale(1)' }], { duration: 300, delay: c0 + 1000, fill: 'both', easing: 'ease-out' });
