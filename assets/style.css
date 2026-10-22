@@ -61,6 +61,8 @@ main { flex: 1; }
 .page h2 { font-size: 13px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
   color: var(--muted); margin: 36px 0 8px; }
 .page p { margin: 0 0 12px; }
+.page ul { margin: 0 0 12px; padding-left: 1.2em; }
+.page li { margin: 0 0 8px; }
 .todo { background: color-mix(in srgb, var(--accent) 28%, transparent); padding: 0 4px; border-radius: 3px; }
 
 footer { border-top: 1px solid var(--line); padding: 24px 0 36px; font-size: 14px; color: var(--muted); }

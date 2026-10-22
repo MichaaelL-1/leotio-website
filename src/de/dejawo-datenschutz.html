@@ -1,0 +1,82 @@
+    <div class="wrap page">
+      <h1>Déjà-wo: Datenschutzerklärung</h1>
+      <p>Stand: 22. Oktober 2026</p>
+
+      <h2>Kurz gesagt</h2>
+      <p>Déjà-wo macht aus Fotos deiner eigenen Mediathek tägliche Rätsel. <strong>Die App hat kein Konto, keinen eigenen Server, keine Analyse, keine Werbung und kein Tracking.</strong> Deine Fotos, Ergebnisse und Einstellungen werden ausschließlich auf deinem Gerät verarbeitet und gespeichert. Die App selbst sendet uns keine Daten.</p>
+      <p>Ausnahmen sind Apple-Dienste, die die App für Karten, Ortsnamen, iCloud-Fotos und, wenn du ein Live-Match spielst, SharePlay nutzt, sowie die Daten, die Apple uns als Entwickler bereitstellt (TestFlight, App Store). Sie sind unten beschrieben.</p>
+
+      <h2>Verantwortlicher</h2>
+      <p>Leotio GmbH, vertreten durch Michael Leicht, Geschäftsführer<br>Fährstraße 217, 40221 Düsseldorf, Deutschland<br>E-Mail: <a href="mailto:info@leotio.de">info@leotio.de</a><br>Weitere Angaben: <a href="../../impressum/">Impressum</a></p>
+
+      <h2>Was die App auf deinem Gerät verarbeitet</h2>
+      <ul>
+        <li><strong>Fotos und ihre Metadaten</strong> (Aufnahmedatum, Aufnahmeort, Kennzeichen „Ausgeblendet“ und „Bildschirmfoto“) aus deiner Mediathek, um geeignete Fotos auszuwählen und die Rätsel zu erstellen. Sie werden nur auf dem Gerät gelesen. Die App lädt Fotos nie hoch, kopiert sie auf keinen Server und verändert sie nicht.</li>
+        <li><strong>Ergebnisse der Bildanalyse</strong> (z. B. Motivkategorie, Prüfung auf sensible Inhalte), um gute Rätselfotos zu wählen und ungeeignete auszuschließen. Auf dem Gerät berechnet mit Apples Frameworks Vision und SensitiveContentAnalysis.</li>
+        <li><strong>Spieldaten:</strong> Rätsel, Tipps, Punkte, Serien, Statistik, Stickerheft, gesperrte Fotos und die kurzen Notizen, die du zu einem Foto schreibst. Gespeichert in der lokalen App-Datenbank auf dem Gerät (SwiftData, iCloud-Synchronisierung ausgeschaltet).</li>
+        <li><strong>Einstellungen</strong> (z. B. Erinnerung, Dauer der Blitzrunde), um deine Vorlieben zu merken. Gespeichert in den lokalen App-Einstellungen auf dem Gerät.</li>
+        <li><strong>Widget-Schnappschuss</strong> (Bildausschnitt des Tagesfotos, gelöst ja/nein, Punkte, Serie, Ortsname, Jahr) für das Widget „Foto des Tages“. Gespeichert in einem gemeinsamen Speicher von App und Widget auf dem Gerät; wird bei Entzug des Fotozugriffs gelöscht.</li>
+      </ul>
+      <p>Keine dieser Daten wird an uns oder an Dritte übermittelt. Wenn du Gerätebackups nutzt (iCloud-Backup oder Computer), kann Apple App-Daten gemäß deinen eigenen Einstellungen in dieses Backup aufnehmen.</p>
+
+      <h2>Genutzte Apple-Dienste</h2>
+      <p>Die App enthält keinen eigenen Netzwerkcode. Einige verwendete Apple-Frameworks verbinden sich selbstständig mit Apple-Servern:</p>
+      <ul>
+        <li><strong>Apple Karten (MapKit).</strong> Die Karte wird von Apple geladen. Wenn du im Suchfeld einen Ort tippst oder diktierst, wird der Suchbegriff an Apple gesendet, um Vorschläge zu erhalten. Um Ortsnamen (Ort, Region, Land) anzuzeigen, werden die Koordinaten des Fotos und deines Tipps zur Ortsbestimmung an Apple gesendet. Nach Apples Angaben werden diese Daten nicht mit deinem Apple Account verknüpft. Siehe <a href="https://www.apple.com/legal/privacy/data/de/apple-maps/">Apple Karten und Datenschutz</a>.</li>
+        <li><strong>iCloud-Fotos.</strong> Wenn du iCloud-Fotos mit „iPhone-Speicher optimieren“ nutzt, kann iOS beim Anzeigen eines Fotos die Originalversion aus deiner iCloud-Mediathek laden, genau wie in der Fotos-App. Diese Übertragung findet zwischen deinem Gerät und deinem eigenen iCloud-Account statt und wird von Apple abgewickelt. Siehe <a href="https://www.apple.com/de/legal/privacy/">Apple Datenschutzrichtlinie</a>.</li>
+        <li><strong>Mitteilungen.</strong> Die tägliche Erinnerung ist eine lokale Mitteilung, die auf dem Gerät geplant wird. Es wird kein Push-Dienst verwendet.</li>
+        <li><strong>Teilen.</strong> Nur wenn du auf „Postkarte schicken“ tippst, erstellt die App ein Postkartenbild mit dem gewählten Foto, seinem Aufnahmedatum und einem kurzen Gruß; den Ortsnamen kannst du in der Vorschau abschalten. Das Bild wird neu gezeichnet und enthält keine GPS- oder EXIF-Daten und keine Punkte. Es geht an das iOS-Teilen-Menü; was danach passiert, hängt von der App ab, die du wählst. Ergebnisse der Blitzrunde werden als reiner Text ohne Foto geteilt.</li>
+      </ul>
+
+      <h2>Live-Match mit Freunden (SharePlay)</h2>
+      <p>Dieser Abschnitt gilt, sobald die Dia-Runde in deiner Version der App verfügbar ist, und nur, wenn du in einer SharePlay-Sitzung über FaceTime oder Nachrichten ein Match startest oder ihm beitrittst.</p>
+      <ul>
+        <li>Wer das Match startet, wählt die Fotos mit Apples Fotoauswahl aus. Nur diese Fotos werden verwendet.</li>
+        <li>Für jede Runde sendet das Gerät des Gastgebers den anderen Teilnehmern eine neu kodierte Kopie des Fotos (höchstens 1024 Pixel, ohne GPS- oder EXIF-Daten) und die Reihenfolge, in der es aufgedeckt wird. Nach der Runde sendet es die Lösung: Ort auf etwa 11 Meter gerundet (kein Ort bei Fotos, die zu Hause aufgenommen wurden), Jahr, Jahreszeit und, falls vorhanden, den Ortsnamen.</li>
+        <li>Spitznamen, Tipps und Punkte werden während des Matches zwischen den Teilnehmern ausgetauscht. Es werden keine Foto-IDs, kein genaues Aufnahmedatum und keine anderen Fotos aus deiner Mediathek gesendet.</li>
+        <li>Auf den Geräten der Teilnehmer liegen die Fotos nur im Arbeitsspeicher und werden am Ende des Matches gelöscht.</li>
+        <li>Die Übertragung wickelt Apples SharePlay-Dienst ab. Wir erhalten keine dieser Daten. Siehe <a href="https://www.apple.com/de/legal/privacy/">Apple Datenschutzrichtlinie</a>.</li>
+      </ul>
+      <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung des Matches, das du startest oder dem du beitrittst). Bitte nutze in einem Match nur Fotos, die die anderen Teilnehmer sehen dürfen.</p>
+
+      <h2>Daten, die Apple uns bereitstellt</h2>
+      <ul>
+        <li><strong>TestFlight (Betatests).</strong> Wenn du eine Betaversion über Apples TestFlight testest, stellt Apple uns die für den Test nötigen Daten bereit: Name und E-Mail-Adresse deiner Einladung (nicht bei öffentlichen Links), Gerätemodell, Betriebssystemversion, Installations- und Sitzungsdaten, Absturzberichte sowie Feedback wie Bildschirmfotos und Kommentare, das du selbst sendest. Wir nutzen diese Daten nur, um den Test durchzuführen und Fehler zu beheben (Art. 6 Abs. 1 lit. f DSGVO; unser berechtigtes Interesse ist eine stabile App), und löschen sie, wenn sie nicht mehr benötigt werden. Apple erklärt die eigene Verarbeitung in der TestFlight-App und in der <a href="https://www.apple.com/de/legal/privacy/">Apple Datenschutzrichtlinie</a>.</li>
+        <li><strong>App Store.</strong> Wenn du in deinen Geräteeinstellungen zugestimmt hast, Analysedaten mit App-Entwicklern zu teilen, stellt Apple uns zusammengefasste Nutzungs- und Absturzstatistiken bereit, die dich nicht identifizieren.</li>
+      </ul>
+
+      <h2>Rechtsgrundlage</h2>
+      <p>Die Nutzung von Apple Karten für Suche und Ortsnamen ist erforderlich, um das von dir gewünschte Spiel bereitzustellen (Art. 6 Abs. 1 lit. b DSGVO). Die Verarbeitung auf deinem Gerät liegt allein in deiner Hand; wir erhalten diese Daten nicht.</p>
+
+      <h2>Kontakt per E-Mail</h2>
+      <p>Wenn du uns schreibst, verarbeiten wir deine Angaben, um die Anfrage zu beantworten (Art. 6 Abs. 1 lit. b bzw. f DSGVO). Die E-Mails liegen bei unserem Anbieter STRATO GmbH, Otto-Ostrowski-Straße 7, 10249 Berlin, mit dem ein Auftragsverarbeitungsvertrag besteht. Wir löschen die Daten, wenn sie nicht mehr benötigt werden und keine gesetzlichen Aufbewahrungspflichten bestehen.</p>
+
+      <h2>Berechtigungen</h2>
+      <ul>
+        <li><strong>Fotomediathek:</strong> für die Rätsel erforderlich. Du kannst vollen oder eingeschränkten Zugriff wählen und ihn jederzeit unter Einstellungen › Datenschutz &amp; Sicherheit › Fotos ändern.</li>
+        <li><strong>Mitteilungen:</strong> optional, nur für die tägliche Erinnerung.</li>
+      </ul>
+      <p>Die App fragt nicht nach deinem aktuellen Standort, Kontakten, Kamera, Mikrofon oder Tracking (App Tracking Transparency).</p>
+
+      <h2>Was die App nicht tut</h2>
+      <ul>
+        <li>kein Benutzerkonto, keine Anmeldung</li>
+        <li>keine Analyse-, Absturzberichts- oder Werbe-SDKs von Drittanbietern</li>
+        <li>kein Tracking über Apps oder Websites hinweg</li>
+        <li>kein eigener Server; keine Übermittlung von Fotos, Ergebnissen oder Metadaten an uns</li>
+        <li>kein Verkauf und keine Weitergabe personenbezogener Daten</li>
+      </ul>
+
+      <h2>Daten löschen</h2>
+      <p>Wenn du die App löschst, werden alle App-Daten auf deinem Gerät entfernt (Spieldaten, Notizen, Einstellungen, Widget-Schnappschuss). Entziehst du den Fotozugriff, wird das Widget-Bild gelöscht. Deine Fotos in der Mediathek werden von der App nie verändert.</p>
+
+      <h2>Kinder</h2>
+      <p>Die App erhebt wissentlich keine Daten von irgendjemandem, auch nicht von Kindern, weil sie überhaupt keine Daten erhebt.</p>
+
+      <h2>Deine Rechte</h2>
+      <p>Nach der DSGVO hast du das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21) sowie das Recht auf Beschwerde bei einer Aufsichtsbehörde. Abgesehen von TestFlight-Daten und E-Mails speichern wir keine personenbezogenen Daten über dich; die Daten auf deinem Gerät liegen allein in deiner Hand. Bei Fragen wende dich an die oben genannte Adresse.</p>
+      <p>Zuständige Aufsichtsbehörde: Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW), <a href="https://www.ldi.nrw.de">www.ldi.nrw.de</a>.</p>
+
+      <h2>Änderungen</h2>
+      <p>Ändert sich die Datenverarbeitung der App (z. B. durch einen künftigen Familienmodus über iCloud), aktualisieren wir diese Erklärung vor Veröffentlichung der betreffenden Version.</p>
+    </div>

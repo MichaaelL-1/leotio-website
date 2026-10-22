@@ -13,9 +13,13 @@ PAGES = {
     "support": {"en": ("support/",  "Support – Leotio"),   "de": ("de/support/",      "Support – Leotio")},
     "privacy": {"en": ("privacy/",  "Privacy – Leotio"),   "de": ("de/datenschutz/",  "Datenschutz – Leotio")},
     "imprint": {"en": ("imprint/",  "Imprint – Leotio"),   "de": ("de/impressum/",    "Impressum – Leotio")},
+    "dejawo-privacy": {"en": ("dejawo/privacy/",     "Déjà-where: Privacy Policy – Leotio"),
+                       "de": ("de/dejawo/datenschutz/", "Déjà-wo: Datenschutzerklärung – Leotio")},
 }
-SRC = {"en": {"home": "home", "support": "support", "privacy": "privacy", "imprint": "imprint"},
-       "de": {"home": "home", "support": "support", "privacy": "datenschutz", "imprint": "impressum"}}
+SRC = {"en": {"home": "home", "support": "support", "privacy": "privacy", "imprint": "imprint",
+              "dejawo-privacy": "dejawo-privacy"},
+       "de": {"home": "home", "support": "support", "privacy": "datenschutz", "imprint": "impressum",
+              "dejawo-privacy": "dejawo-datenschutz"}}
 LABELS = {"en": {"support": "Support", "privacy": "Privacy", "imprint": "Imprint"},
           "de": {"support": "Support", "privacy": "Datenschutz", "imprint": "Impressum"}}
 DESC = {"en": "Leotio GmbH – from Old English lēoht: light.",
