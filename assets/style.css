@@ -100,21 +100,34 @@ a { color: inherit; text-decoration: none; }
   .head { margin-bottom: 16px; }
 }
 
-/* Lade-Animation Startseite (assets/intro.js). Ohne JS oder nach 7 s ist alles sichtbar. */
-.intro .top .logo > *, .intro .lang, .intro .hero, .intro footer { opacity: 0; animation: intro-fallback .01s 7s forwards; }
+/* Startseite „Papier und Licht“ (assets/papier.js): WebGL-Papier hinter der Seite, Zeichen als Tiefdruck.
+   Ohne WebGL2 bleibt die CSS-Prägung unten. Auftakt: Inhalt erscheint nach der Prägung, ohne JS spätestens nach 7 s. */
+:root { --paper: #ebe7df; --graphite: #4f5359; --foil: #c9916d; }
+@media (prefers-color-scheme: dark) { :root { --paper: #141518; --graphite: #8d9298; } }
+html.papier { background: var(--paper); }
+.papier body { background: transparent; }
+.papier-bg { position: absolute; left: 0; top: 0; z-index: -1; display: block; pointer-events: none; }
+.papier-stift { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; overflow: visible; mix-blend-mode: multiply; }
+.papier-stift path, .papier-stift circle { fill: none; stroke: var(--graphite); stroke-linecap: round; stroke-linejoin: round; }
+.papier .zeichen { visibility: hidden; width: clamp(200px, 30vw, 380px); }
+.papier .top .logo > *, .papier .lang, .papier .hero .text, .papier footer { transition: opacity .8s ease; }
+.intro .top .logo > *, .intro .lang, .intro .hero .text, .intro footer { opacity: 0; animation: intro-fallback .01s 7s forwards; }
 @keyframes intro-fallback { to { opacity: 1; } }
-.intro-stage { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: var(--bg); cursor: pointer; }
-.intro-stage svg { width: min(62vmin, 380px); height: auto; color: var(--ink); overflow: visible; }
-.intro-stage .i-guide { fill: none; stroke: var(--muted); stroke-width: .8; vector-effect: non-scaling-stroke; opacity: 0; }
-.intro-stage .i-pin { fill: var(--muted); opacity: 0; }
-.intro-stage .i-dot { fill: #fff8f0; opacity: 0; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--accent)) drop-shadow(0 0 14px var(--accent)); }
+/* Druck: Graphit am Tag, Kupferfolie bei Nacht */
+.papier .head { text-shadow: 0 1px 0 rgba(255,255,255,.55); }
+@media (prefers-color-scheme: dark) {
+  .papier-stift { mix-blend-mode: screen; }
+  .papier .head, .papier .top .logo, .papier .entry .ety b { color: var(--foil); text-shadow: 0 -1px 0 rgba(0,0,0,.6); }
+  .papier .entry dd, .papier .entry dt .pos { color: #b48a70; }
+}
+@media (max-width: 760px) {
+  .papier .figure { display: flex; justify-content: center; order: -1; }
+  .papier .zeichen { width: min(56vw, 260px); }
+}
 .z-play { cursor: pointer; }
 .z-play:focus { outline: none; }
-.z-play:focus-visible .zeichen { outline: 1px solid var(--accent); outline-offset: 12px; }
+.z-play:focus-visible { outline: 1px solid var(--accent); outline-offset: 12px; }
 .zeichen { overflow: visible; }
-.z-hint { fill: none; stroke: var(--muted); stroke-width: .8; vector-effect: non-scaling-stroke; opacity: 0; transition: opacity .5s ease; }
-.z-play:hover .z-hint, .z-play:focus-visible .z-hint { opacity: .55; }
-@media (hover: none) { .z-hint { display: none; } }
 
 /* Großes Zeichen als Blindprägung: kaum dunkler als der Grund, oben Schatten, unten Lichtkante */
 :root { --praeg-fill: #f3f3f1; --praeg-shadow: .16; --praeg-light: rgba(255,255,255,.95); }
