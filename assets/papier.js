@@ -1,4 +1,5 @@
-/* Leotio – Startseite „Papier und Licht“.
+/* Leotio – „Papier und Licht“. Startseite: Bühne mit Zeichen. Unterseiten (ohne .zeichen): nur der Bogen, fest im Fenster,
+   die Faser wandert beim Scrollen mit, das Licht steht oben links und folgt Maus oder Finger.
    Die Seite ist ein Bogen Baumwollpapier (WebGL). Das Zeichen ist vertieft geprägt (Tiefdruck), das Licht steht
    schräg oben links und folgt Maus oder Finger. Auftakt einmal pro Sitzung: Bleistift zeichnet die Konstruktion
    (Außenkontur, Zirkel 1 : √2, Lote, Innenkonturen), das Zeichen wird ins Papier gedrückt, dann erscheint der Druck.
@@ -7,8 +8,8 @@
 (function () {
   var root = document.documentElement;
   var fig = document.querySelector('.hero .figure'), z = fig && fig.querySelector('.zeichen');
+  var sheet = !z;
   function plain() { root.classList.remove('intro', 'papier'); }
-  if (!z) { plain(); return; }
   var cv = document.createElement('canvas');
   cv.className = 'papier-bg'; cv.setAttribute('aria-hidden', 'true');
   var gl = cv.getContext('webgl2', { antialias: false, premultipliedAlpha: false });
@@ -19,7 +20,7 @@
   // ---------- Shader ----------
   var vs = '#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
   var fs = '#version 300 es\nprecision highp float;\n' +
-    'uniform sampler2D uH;uniform vec4 uTex;uniform vec2 uVp;uniform vec3 uL;uniform float uI,uNight,uDpr,uP;out vec4 o;\n' +
+    'uniform sampler2D uH;uniform vec4 uTex;uniform vec2 uVp,uOff,uAmb;uniform vec3 uL;uniform float uI,uNight,uDpr,uP;out vec4 o;\n' +
     'float h2(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}\n' +
     'float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h2(i),h2(i+vec2(1,0)),f.x),mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),f.x),f.y);}\n' +
     // Baumwollpapier: weiche Wolken, Fasern, feines Korn
@@ -29,7 +30,7 @@
     'vec4 T(vec2 q){vec2 u=(q-uTex.xy)/uTex.zw;if(u.x<0.||u.y<0.||u.x>1.||u.y>1.)return vec4(0.);return texture(uH,u);}\n' +
     // Höhe: R = Zeichen (vertieft), A = breite Mulde, die dicker Karton beim Prägen bildet
     'float Ht(vec2 q){vec4 t=T(q);return -smoothstep(.02,.9,t.r)*3.6*uP-t.a*.35*uP;}\n' +
-    'float H(vec2 q){return paper(q)*.42+Ht(q);}\n' +
+    'float H(vec2 q){return paper(q+uOff)*.42+Ht(q);}\n' +
     'void main(){vec2 q=gl_FragCoord.xy;vec4 t=T(q);\n' +
     '  float hx=H(q+vec2(1,0))-H(q-vec2(1,0)),hy=H(q+vec2(0,1))-H(q-vec2(0,1));\n' +
     '  vec3 N=normalize(vec3(-hx*.9/uDpr,-hy*.9/uDpr,1.));\n' +
@@ -38,7 +39,7 @@
     '  float att=1./(1.+pow(d/(max(uVp.x,uVp.y)*.7),2.));\n' +
     '  vec3 Hh=normalize(L+vec3(0,0,1));\n' +
     '  vec3 paperC=mix(vec3(.953,.937,.906),vec3(.105,.108,.118),uNight);\n' +
-    '  float rel=min(diff/flat0,1.25);float amb=mix(.74,.16,uNight);\n' +
+    '  float rel=min(diff/flat0,1.25);float amb=mix(uAmb.x,uAmb.y,uNight);\n' +
     '  float lit=amb+(1.-amb)*att*uI*mix(1.,2.6,uNight);\n' +
     '  vec3 col=paperC*(lit*mix(1.,.3+.7*rel,.8*uI+.2));\n' +
     // Schlagschatten in der Vertiefung: die dem Licht zugewandte Kante wirft Schatten auf den Grund
@@ -58,11 +59,12 @@
   var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   var loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  var U = {}; ['uH', 'uTex', 'uVp', 'uL', 'uI', 'uNight', 'uDpr', 'uP'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
+  var U = {}; ['uH', 'uTex', 'uVp', 'uOff', 'uAmb', 'uL', 'uI', 'uNight', 'uDpr', 'uP'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
   gl.uniform1i(U.uH, 0);
 
   document.body.insertBefore(cv, document.body.firstChild);
   root.classList.add('papier');
+  if (sheet) cv.style.position = 'fixed';
 
   // ---------- Zeichen-Geometrie (wie das SVG: Linie 0,0394, Teilung 1 : √2) ----------
   var Q = Math.SQRT1_2, B = 1 - Q, SWR = 0.0394;
@@ -84,6 +86,16 @@
   var W = 0, H = 0, dpr = 1, box = null, tex = null, texRect = [0, 0, 1, 1];
   function build() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (sheet) { // Bogen ohne Prägung: Leinwand so groß wie das Fenster, leere Höhenkarte
+      var vw0 = document.documentElement.clientWidth, vh0 = window.innerHeight;
+      W = Math.round(vw0 * dpr); H = Math.round(vh0 * dpr);
+      cv.width = W; cv.height = H; cv.style.width = vw0 + 'px'; cv.style.height = vh0 + 'px';
+      box = { x: vw0 * .2, y: vh0 * .06, s: 0 };
+      if (!tex) { tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); }
+      texRect = [-9, -9, 1, 1]; gl.viewport(0, 0, W, H); return;
+    }
     var cw = document.documentElement.clientWidth;
     cv.style.height = '0px'; stift.setAttribute('height', '0');
     var ch = Math.max(document.documentElement.scrollHeight, window.innerHeight);
@@ -122,7 +134,7 @@
     '<feTurbulence type="fractalNoise" baseFrequency="1.9" numOctaves="1" seed="11" result="g"/>' +
     '<feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3 0 0 0 -.75" result="ga"/>' +
     '<feComposite in="d" in2="ga" operator="in"/></filter></defs><g filter="url(#graphit)"></g>';
-  document.body.insertBefore(stift, cv.nextSibling);
+  if (!sheet) document.body.insertBefore(stift, cv.nextSibling);
   var pg = stift.querySelector('g'), anims = [];
   function pencil() {
     pg.innerHTML = ''; anims.forEach(function (a) { a.cancel(); }); anims = [];
@@ -171,7 +183,7 @@
 
   // ---------- Licht ----------
   var tx = null, ty = null, lx = 0, ly = 0, night = darkQ.matches ? 1 : 0, raf = 0, first = true;
-  function rest() { return [box.x - 0.36 * box.s, box.y - 0.26 * box.s]; }   // schräg oben links, etwa 45 Grad
+  function rest() { return sheet ? [box.x, box.y] : [box.x - 0.36 * box.s, box.y - 0.26 * box.s]; }   // schräg oben links, etwa 45 Grad
   function kick() { if (!raf) raf = requestAnimationFrame(frame); }
   function frame(now) {
     raf = 0; if (!box) return;
@@ -191,12 +203,15 @@
     var vw = window.innerWidth * dpr, vh = window.innerHeight * dpr;
     gl.uniform4f(U.uTex, texRect[0], texRect[1], texRect[2], texRect[3]);
     gl.uniform2f(U.uVp, vw, vh);
+    gl.uniform2f(U.uOff, 0, sheet ? -Math.round(window.scrollY * dpr) : 0);
+    if (sheet) gl.uniform2f(U.uAmb, .9, .3); else gl.uniform2f(U.uAmb, .74, .16);
     gl.uniform3f(U.uL, lx * dpr, H - ly * dpr, Math.max(Math.min(vw, vh) * .42, Math.max(vw, vh) * .3));
     gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (more) kick();
   }
-  function pt(ev) { tx = ev.pageX; ty = ev.pageY; kick(); }
+  function pt(ev) { tx = sheet ? ev.clientX : ev.pageX; ty = sheet ? ev.clientY : ev.pageY; kick(); }
+  if (sheet) window.addEventListener('scroll', kick, { passive: true });
   window.addEventListener('pointermove', pt, { passive: true });
   window.addEventListener('pointerdown', pt, { passive: true });
   document.addEventListener('mouseleave', function () { tx = ty = null; kick(); });
@@ -205,7 +220,7 @@
   // Überspringen und erneut abspielen
   document.addEventListener('click', function (ev) { if (playing) { ev.preventDefault(); ev.stopPropagation(); finish(); } }, true);
   document.addEventListener('keydown', function () { if (playing) finish(); });
-  if (!reduce) {
+  if (!reduce && !sheet) {
     var home = document.querySelector('.top .home-link');
     if (home) home.addEventListener('click', function (e) {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || playing) return;
@@ -218,6 +233,7 @@
   function go() {
     if (started) return; started = true;
     build();
+    if (sheet) { finish(); return; }
     if ((root.classList.contains('intro') || location.hash === '#intro') && !reduce) play(); else finish();
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go);
