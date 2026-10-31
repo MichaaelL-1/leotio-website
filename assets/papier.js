@@ -2,7 +2,7 @@
    Die Seite ist ein Bogen Baumwollpapier (WebGL). Das Zeichen ist vertieft geprägt (Tiefdruck), das Licht steht
    schräg oben links und folgt Maus oder Finger. Auftakt einmal pro Sitzung: Bleistift zeichnet die Konstruktion
    (Außenkontur, Zirkel 1 : √2, Lote, Innenkonturen), das Zeichen wird ins Papier gedrückt, dann erscheint der Druck.
-   Klick oder Taste überspringt, Klick auf Zeichen oder Logo spielt erneut, ebenso Adresse #intro.
+   Klick oder Taste überspringt, Klick auf das kleine Logo oben links spielt erneut (nur hier auf der Startseite), ebenso Adresse #intro.
    Ohne WebGL2 bleibt die CSS-Prägung, bei „Bewegung reduzieren“ entfällt der Auftakt. */
 (function () {
   var root = document.documentElement;
@@ -206,10 +206,6 @@
   document.addEventListener('click', function (ev) { if (playing) { ev.preventDefault(); ev.stopPropagation(); finish(); } }, true);
   document.addEventListener('keydown', function () { if (playing) finish(); });
   if (!reduce) {
-    fig.classList.add('z-play'); fig.setAttribute('role', 'button'); fig.setAttribute('tabindex', '0');
-    fig.setAttribute('aria-label', root.lang === 'de' ? 'Prägung erneut zeigen' : 'Show the embossing again');
-    fig.addEventListener('click', function () { if (!playing) play(); });
-    fig.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && !playing) { e.preventDefault(); e.stopPropagation(); play(); } });
     var home = document.querySelector('.top .home-link');
     if (home) home.addEventListener('click', function (e) {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || playing) return;
