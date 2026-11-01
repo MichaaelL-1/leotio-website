@@ -82,9 +82,11 @@ a { color: inherit; text-decoration: none; }
 .apphero .lead { margin: 0; }
 .appicon { width: 128px; height: 128px; border-radius: 28px; flex: none; box-shadow: 0 0 0 1px var(--line); }
 .page .soon { margin-top: 32px; }
-.applist, .page .applist { list-style: none; padding: 0; margin: 16px 0; }
-.applist a { display: flex; align-items: center; gap: 16px; padding: 12px 0; text-decoration: none; }
-.applist img { width: 48px; height: 48px; border-radius: 11px; box-shadow: 0 0 0 1px var(--line); }
+.applist, .page .applist { list-style: none; padding: 0; margin: 16px 0; max-width: 560px; }
+.applist li { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
+.applist li > img { width: 48px; height: 48px; border-radius: 11px; box-shadow: 0 0 0 1px var(--line); flex: none; }
+.applist .badge { margin-left: auto; flex: none; line-height: 0; }
+.applist .badge img { width: 120px; height: 40px; }
 .applist span { display: flex; flex-direction: column; color: var(--muted); font-size: 14px; }
 .applist b { font-size: 16px; }
 @media (max-width: 520px) { .apphero { flex-direction: column; align-items: flex-start; gap: 20px; } .appicon { width: 96px; height: 96px; border-radius: 21px; } }
