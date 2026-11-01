@@ -29,7 +29,7 @@
     '  return n*.35+fib*.22+vn(p*1.6)*.16+vn(p*.45)*.1;}\n' +
     'vec4 T(vec2 q){vec2 u=(q-uTex.xy)/uTex.zw;if(u.x<0.||u.y<0.||u.x>1.||u.y>1.)return vec4(0.);return texture(uH,u);}\n' +
     // Höhe: R = Zeichen (vertieft), A = breite Mulde, die dicker Karton beim Prägen bildet
-    'float Ht(vec2 q){vec4 t=T(q);return -smoothstep(.02,.9,t.r)*3.6*uP-t.a*.35*uP;}\n' +
+    'float Ht(vec2 q){vec4 t=T(q);return -smoothstep(.12,.88,t.r)*3.6*uP-t.a*.22*uP;}\n' +
     'float H(vec2 q){return paper(q+uOff)*.42+Ht(q);}\n' +
     'void main(){vec2 q=gl_FragCoord.xy;vec4 t=T(q);\n' +
     '  float hx=H(q+vec2(1,0))-H(q-vec2(1,0)),hy=H(q+vec2(0,1))-H(q-vec2(0,1));\n' +
@@ -46,7 +46,7 @@
     '  vec2 ld=normalize(uL.xy-q+1e-3);float sl=uL.z/max(length(uL.xy-q),1.);float h0=Ht(q),occ=0.;\n' +
     '  for(int i=1;i<=6;i++){float dd=float(i)*1.6*uDpr;occ=max(occ,Ht(q+ld*dd)-h0-sl*dd*.8/uDpr);}\n' +
     '  col*=1.-.5*smoothstep(0.,1.2,occ)*uI;\n' +
-    '  col*=1.-.22*smoothstep(.02,.9,t.r)*uP;\n' +
+    '  col*=1.-.22*smoothstep(.12,.88,t.r)*uP;\n' +
     '  col+=pow(max(dot(N,Hh),0.),30.)*mix(.05,.12,uNight)*att*uI;\n' +
     '  col+=(h2(q)-.5)/255.*2.;o=vec4(col,1.);}';
   function sh(type, src) { var x = gl.createShader(type); gl.shaderSource(x, src); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; }
@@ -83,7 +83,7 @@
   }
 
   // ---------- Aufbau: Leinwand über die ganze Seite, Höhenkarte nur um das Zeichen ----------
-  var W = 0, H = 0, dpr = 1, box = null, tex = null, texRect = [0, 0, 1, 1];
+  var W = 0, H = 0, dpr = 1, box = null, tex = null, texRect = [0, 0, 1, 1], off = [0, 0], cur = [0, 0];
   function build() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     if (sheet) { // Bogen ohne Prägung: Leinwand so groß wie das Fenster, leere Höhenkarte
@@ -109,8 +109,8 @@
     var k = side / (box.s + 2 * m); x.scale(k, k); x.beginPath(); markQ(x, m, m, box.s, box.s * SWR); x.fill('nonzero');
     var d = x.getImageData(0, 0, side, side).data, n = side * side, emb = new Float32Array(n), i;
     for (i = 0; i < n; i++) emb[i] = d[i * 4] / 255;
-    blur(emb, side, side, Math.max(2, Math.round(box.s * 0.006 * dpr)));
-    var wide = new Float32Array(emb); blur(wide, side, side, Math.max(4, Math.round(box.s * 0.022 * dpr)));
+    blur(emb, side, side, Math.max(1, Math.round(box.s * 0.0022 * dpr)));
+    var wide = new Float32Array(emb); blur(wide, side, side, Math.max(3, Math.round(box.s * 0.012 * dpr)));
     var px = new Float32Array(n * 4);
     for (i = 0; i < n; i++) { px[i * 4] = emb[i]; px[i * 4 + 3] = wide[i]; }
     if (tex) gl.deleteTexture(tex);
@@ -139,7 +139,7 @@
   function pencil() {
     pg.innerHTML = ''; anims.forEach(function (a) { a.cancel(); }); anims = [];
     if (!box || !pg.animate) return;
-    var x0 = box.x, y0 = box.y, S = box.s, T = SWR, X = .07;
+    var x0 = box.x + off[0], y0 = box.y + off[1], S = box.s, T = SWR, X = .07;
     var P = function (a, b) { return (x0 + a * S).toFixed(1) + ',' + (y0 + b * S).toFixed(1); };
     var gw = Math.max(.7, S * .0018), cw = Math.max(1.1, S * .0028), ez = 'cubic-bezier(.4,0,.3,1)';
     function add(d, w, op, at, dur, dash) {
@@ -170,20 +170,25 @@
   }
 
   // ---------- Ablauf ----------
-  var PRESS = 3700, PRESS_DUR = 900, REVEAL = 4800, DONE = 6000;
+  // Auftakt in der Fenstermitte, nach dem Prägen gleitet der Bogen mit dem Zeichen an seinen Platz
+  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, REVEAL = 5500, DONE = 6700;
   var iS = -1e9, playing = false, revealed = true;
   function clamp(v) { return Math.max(0, Math.min(1, v)); }
   function play() {
     try { sessionStorage.setItem('leotio-intro', '1'); } catch (e) {}
     if (reduce) { finish(); return; }
-    root.classList.add('intro'); revealed = false; playing = true; iS = performance.now(); pencil(); kick();
+    root.classList.add('intro'); revealed = false; playing = true; iS = performance.now(); center(); pencil(); kick();
+  }
+  function center() {
+    if (!box) return;
+    off = [document.documentElement.clientWidth / 2 - (box.x + box.s / 2), window.scrollY + window.innerHeight / 2 - (box.y + box.s / 2)];
   }
   function reveal() { if (!revealed) { revealed = true; root.classList.remove('intro'); } }
   function finish() { playing = false; iS = -1e9; anims.forEach(function (a) { a.finish(); }); reveal(); kick(); }
 
   // ---------- Licht ----------
   var tx = null, ty = null, lx = 0, ly = 0, night = darkQ.matches ? 1 : 0, raf = 0, first = true;
-  function rest() { return sheet ? [box.x, box.y] : [box.x - 0.36 * box.s, box.y - 0.26 * box.s]; }   // schräg oben links, etwa 45 Grad
+  function rest() { return sheet ? [box.x, box.y] : [box.x + cur[0] - 0.36 * box.s, box.y + cur[1] - 0.26 * box.s]; }   // schräg oben links, etwa 45 Grad
   function kick() { if (!raf) raf = requestAnimationFrame(frame); }
   function frame(now) {
     raf = 0; if (!box) return;
@@ -194,16 +199,18 @@
       I = Math.min(1, .25 + e / 3200);
       kp = clamp((e - PRESS) / PRESS_DUR); Pp = kp * kp * (3 - 2 * kp);
     }
+    var sp = playing ? clamp((e - SLIDE) / SLIDE_DUR) : 1; sp = sp < .5 ? 4 * sp * sp * sp : 1 - Math.pow(-2 * sp + 2, 3) / 2;
+    cur = [off[0] * (1 - sp), off[1] * (1 - sp)];
     var r = rest(), ax = r[0], ay = r[1];
     if (!playing && tx !== null) { ax = tx; ay = ty; }
     if (first) { lx = ax; ly = ay; first = false; }
-    var f = reduce ? 1 : .12; lx += (ax - lx) * f; ly += (ay - ly) * f;
+    var f = reduce || (playing && e < SLIDE + SLIDE_DUR) ? 1 : .12; lx += (ax - lx) * f; ly += (ay - ly) * f;
     var nt = darkQ.matches ? 1 : 0; night += (nt - night) * (reduce ? 1 : .08);
     if (Math.abs(ax - lx) + Math.abs(ay - ly) > .3 || Math.abs(nt - night) > .002) more = true;
     var vw = window.innerWidth * dpr, vh = window.innerHeight * dpr;
-    gl.uniform4f(U.uTex, texRect[0], texRect[1], texRect[2], texRect[3]);
+    gl.uniform4f(U.uTex, texRect[0] + cur[0] * dpr, texRect[1] - cur[1] * dpr, texRect[2], texRect[3]);
     gl.uniform2f(U.uVp, vw, vh);
-    gl.uniform2f(U.uOff, 0, sheet ? -Math.round(window.scrollY * dpr) : 0);
+    gl.uniform2f(U.uOff, sheet ? 0 : -cur[0] * dpr, sheet ? -Math.round(window.scrollY * dpr) : cur[1] * dpr);   // Faser gleitet mit dem Zeichen
     if (sheet) gl.uniform2f(U.uAmb, .9, .3); else gl.uniform2f(U.uAmb, .74, .16);
     gl.uniform3f(U.uL, lx * dpr, H - ly * dpr, Math.max(Math.min(vw, vh) * .42, Math.max(vw, vh) * .3));
     gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp);
@@ -228,7 +235,7 @@
     });
   }
 
-  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { build(); if (playing) pencil(); kick(); }, 150); });
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { build(); if (playing) { center(); pencil(); } kick(); }, 150); });
   var started = false;
   function go() {
     if (started) return; started = true;
