@@ -85,7 +85,9 @@
   // ---------- Aufbau: Leinwand über die ganze Seite, Höhenkarte nur um das Zeichen ----------
   var W = 0, H = 0, dpr = 1, box = null, tex = null, texRect = [0, 0, 1, 1], off = [0, 0], cur = [0, 0];
   function build() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Immer mindestens doppelt rechnen: auf 1x-Bildschirmen (große Monitore) wird das Papier überabgetastet,
+    // Korn und Faser werden feiner, die Prägekante glatter. Obergrenze 2 hält Telefone mit 3x schnell.
+    dpr = 2;
     if (sheet) { // Bogen ohne Prägung: Leinwand so groß wie das Fenster, leere Höhenkarte
       var vw0 = document.documentElement.clientWidth, vh0 = window.innerHeight;
       W = Math.round(vw0 * dpr); H = Math.round(vh0 * dpr);
