@@ -33,6 +33,8 @@ a { color: inherit; text-decoration: none; }
 /* Kopf: Kombination 22 px links, Sprache rechts */
 .top { display: flex; align-items: center; justify-content: space-between; padding-top: 28px; padding-bottom: 28px; }
 .logo { display: block; height: 22px; width: auto; color: var(--ink); }
+/* Große Bildschirme: 26 px, damit die Konturlinie des Zeichens (6,4/161,8) mindestens 1 Bildpunkt breit ist */
+@media (min-width: 1280px) { .logo { height: 26px; } }
 .lang { display: flex; gap: 4px; font-size: 13px; font-weight: 500; letter-spacing: .1em; }
 .lang a { padding: 6px 8px; color: var(--muted); }
 .lang a:hover { color: var(--ink); }
