@@ -38,7 +38,7 @@
     '  float diff=max(dot(N,L),0.),flat0=max(L.z,.05);\n' +
     '  float att=1./(1.+pow(d/(max(uVp.x,uVp.y)*.7),2.));\n' +
     '  vec3 Hh=normalize(L+vec3(0,0,1));\n' +
-    '  vec3 paperC=mix(vec3(.953,.937,.906),vec3(.105,.108,.118),uNight);\n' +
+    '  vec3 paperC=mix(vec3(.988,.988,.98),vec3(.089,.093,.099),uNight);\n' +
     '  float rel=min(diff/flat0,1.25);float amb=mix(uAmb.x,uAmb.y,uNight);\n' +
     '  float lit=amb+(1.-amb)*att*uI*mix(1.,2.6,uNight);\n' +
     '  vec3 col=paperC*(lit*mix(1.,.3+.7*rel,.8*uI+.2));\n' +
