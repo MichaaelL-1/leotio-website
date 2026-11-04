@@ -173,7 +173,7 @@
 
   // ---------- Ablauf ----------
   // Auftakt in der Fenstermitte, nach dem Prägen gleitet der Bogen mit dem Zeichen an seinen Platz
-  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, REVEAL = 5500, DONE = 6700;
+  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, REVEAL = 4600, DONE = 6700;
   var iS = -1e9, playing = false, revealed = true;
   function clamp(v) { return Math.max(0, Math.min(1, v)); }
   function play() {
