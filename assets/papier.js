@@ -221,8 +221,11 @@
   }
   function pt(ev) { tx = sheet ? ev.clientX : ev.pageX; ty = sheet ? ev.clientY : ev.pageY; kick(); }
   if (sheet) window.addEventListener('scroll', kick, { passive: true });
-  window.addEventListener('pointermove', pt, { passive: true });
-  window.addEventListener('pointerdown', pt, { passive: true });
+  // Bei „Bewegung reduzieren“ steht das Licht still
+  if (!reduce) {
+    window.addEventListener('pointermove', pt, { passive: true });
+    window.addEventListener('pointerdown', pt, { passive: true });
+  }
   document.addEventListener('mouseleave', function () { tx = ty = null; kick(); });
   if (darkQ.addEventListener) darkQ.addEventListener('change', kick);
 
