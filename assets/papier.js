@@ -227,7 +227,13 @@
   if (darkQ.addEventListener) darkQ.addEventListener('change', kick);
 
   // Überspringen und erneut abspielen
-  document.addEventListener('click', function (ev) { if (playing) { ev.preventDefault(); ev.stopPropagation(); finish(); } }, true);
+  // Ein Link (außer dem kleinen Logo) öffnet sich auch während des Auftakts sofort
+  document.addEventListener('click', function (ev) {
+    if (!playing) return;
+    var a = ev.target.closest && ev.target.closest('a[href]');
+    finish();
+    if (!a || a.classList.contains('home-link')) { ev.preventDefault(); ev.stopPropagation(); }
+  }, true);
   document.addEventListener('keydown', function () { if (playing) finish(); });
   if (!reduce && !sheet) {
     var home = document.querySelector('.top .home-link');
