@@ -173,7 +173,7 @@
 
   // ---------- Ablauf ----------
   // Auftakt in der Fenstermitte, nach dem Prägen gleitet der Bogen mit dem Zeichen an seinen Platz
-  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, REVEAL = 5500, DONE = 6700;
+  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, REVEAL = 4600, DONE = 6700;
   var iS = -1e9, playing = false, revealed = true;
   function clamp(v) { return Math.max(0, Math.min(1, v)); }
   function play() {
@@ -221,13 +221,22 @@
   }
   function pt(ev) { tx = sheet ? ev.clientX : ev.pageX; ty = sheet ? ev.clientY : ev.pageY; kick(); }
   if (sheet) window.addEventListener('scroll', kick, { passive: true });
-  window.addEventListener('pointermove', pt, { passive: true });
-  window.addEventListener('pointerdown', pt, { passive: true });
+  // Bei „Bewegung reduzieren“ steht das Licht still
+  if (!reduce) {
+    window.addEventListener('pointermove', pt, { passive: true });
+    window.addEventListener('pointerdown', pt, { passive: true });
+  }
   document.addEventListener('mouseleave', function () { tx = ty = null; kick(); });
   if (darkQ.addEventListener) darkQ.addEventListener('change', kick);
 
   // Überspringen und erneut abspielen
-  document.addEventListener('click', function (ev) { if (playing) { ev.preventDefault(); ev.stopPropagation(); finish(); } }, true);
+  // Ein Link (außer dem kleinen Logo) öffnet sich auch während des Auftakts sofort
+  document.addEventListener('click', function (ev) {
+    if (!playing) return;
+    var a = ev.target.closest && ev.target.closest('a[href]');
+    finish();
+    if (!a || a.classList.contains('home-link')) { ev.preventDefault(); ev.stopPropagation(); }
+  }, true);
   document.addEventListener('keydown', function () { if (playing) finish(); });
   if (!reduce && !sheet) {
     var home = document.querySelector('.top .home-link');

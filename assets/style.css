@@ -114,7 +114,8 @@ html.papier, html.blatt { background: var(--paper); }
 .papier-stift path, .papier-stift circle { fill: none; stroke: var(--graphite); stroke-linecap: round; stroke-linejoin: round; }
 .papier .zeichen { visibility: hidden; width: clamp(200px, 30vw, 380px); }
 .papier .top .logo > *, .papier .lang, .papier .hero .text, .papier footer { transition: opacity .8s ease; }
-.intro .top .logo > *, .intro .lang, .intro .hero .text, .intro footer { opacity: 0; animation: intro-fallback .01s 7s forwards; }
+/* Logo, Sprache und Fuß bleiben stehen, damit die Seite nie leer wirkt; nur der Eintrag erscheint nach der Prägung */
+.intro .hero .text { opacity: 0; animation: intro-fallback .01s 7s forwards; }
 @keyframes intro-fallback { to { opacity: 1; } }
 /* Druck: Graphit am Tag, Weiß bei Nacht (Leica-Schwarz) */
 /* Linien auf Papier: Graphit, durchscheinend (Kalk verschwindet auf dem Bogen) */
@@ -150,3 +151,20 @@ html.blatt, html.papier { --line: rgba(32,34,37,.14); }
 
 /* Marke 3.0, 7A: nach dem Auftakt ein rotes Quadrat, 7 px, unter dem Text. Einmal pro Fläche, nur hier. */
 .punkt { display: block; width: 7px; height: 7px; margin-top: 28px; background: var(--rot); }
+
+/* Impeccable-Prüfung 04.11.2026 */
+/* Kontrast: zum Rand wird das Papier dunkler, Kleingedrucktes dort in Graphit statt Grau (hell ≥ 4,5 : 1) */
+.papier .soon, .papier .foot { color: var(--graphite); }
+@media (prefers-color-scheme: dark) { .papier .soon, .papier .foot { color: var(--muted); } }
+/* Tippflächen mindestens 44 px; negative Ränder halten die Abstände wie bisher */
+.home-link { display: block; padding: 11px 0; margin: -11px 0; }
+.lang { margin: -6px 0; }
+.lang a, .appnav a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; }
+.appnav { margin: -5px 0; }
+.foot .links a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+/* Lesbare Zeilenlänge im Fließtext (etwa 75 Zeichen) */
+.page > p, .page > ul { max-width: 36em; }
+/* App-Seiten: Kopf und Fuß in derselben 720-px-Spalte wie Inhalt */
+body:has(.appbar) > .top, body:has(.appbar) > footer { max-width: 720px; }
+.appname { min-height: 44px; margin: -2px 0; }
+.page p, .page li { text-wrap: pretty; }
