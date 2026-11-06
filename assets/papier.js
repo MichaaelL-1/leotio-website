@@ -173,9 +173,9 @@
 
   // ---------- Ablauf ----------
   // Auftakt in der Fenstermitte, nach dem Prägen gleitet der Bogen mit dem Zeichen an seinen Platz
-  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, REVEAL = 4600, DONE = 6700;
-  // Handy: Zeichen steht über dem Eintrag und gleitet über ihn hinweg, also erst nach dem Gleiten einblenden
-  if (matchMedia('(max-width: 760px)').matches) REVEAL = SLIDE + SLIDE_DUR;
+  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, DONE = 6700;
+  // Der Eintrag erscheint erst, wenn das Zeichen an seinem Platz steht (Handy und Desktop)
+  var REVEAL = SLIDE + SLIDE_DUR;
   var iS = -1e9, playing = false, revealed = true;
   function clamp(v) { return Math.max(0, Math.min(1, v)); }
   function play() {
