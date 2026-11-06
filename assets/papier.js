@@ -256,7 +256,17 @@
     });
   }
 
-  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { build(); if (playing) { center(); pencil(); } kick(); }, 150); });
+  // Handy: Die Adressleiste ändert beim Laden und Scrollen nur die Fensterhöhe. Während des Auftakts nichts neu
+  // aufbauen, sonst beginnt der Bleistift von vorn, während Prägen und Gleiten weiterlaufen.
+  // Ändert sich die Breite (Drehen), Zeichnung neu aufbauen und auf den laufenden Takt setzen.
+  var rt, lastW = window.innerWidth;
+  window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () {
+    var wChanged = window.innerWidth !== lastW; lastW = window.innerWidth;
+    if (playing && !wChanged) { kick(); return; }
+    build();
+    if (playing) { center(); pencil(); var el = performance.now() - iS; anims.forEach(function (a) { a.currentTime = el; }); }
+    kick();
+  }, 150); });
   var started = false;
   function go() {
     if (started) return; started = true;
