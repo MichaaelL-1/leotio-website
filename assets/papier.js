@@ -168,14 +168,22 @@
     add('M' + P(T, T) + ' L' + P(B - T / 2, T) + ' L' + P(B - T / 2, Q + T / 2) + ' L' + P(1 - T, Q + T / 2) + ' L' + P(1 - T, 1 - T) + ' L' + P(T, 1 - T) + ' Z', cw, .85, 2800, 650);
     add('M' + P(B + T / 2, T) + ' L' + P(1 - T, T) + ' L' + P(1 - T, Q - T / 2) + ' L' + P(B + T / 2, Q - T / 2) + ' Z', cw, .85, 3000, 500);
     // Bleistift verblasst, während das Zeichen ins Papier sinkt
-    anims.push(pg.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 1000, delay: 3700, fill: 'both' }));
+    anims.push(pg.animate([{ opacity: 1 }, { opacity: 0 }], { duration: PRESS_DUR, delay: PRESS, fill: 'both' }));
   }
 
   // ---------- Ablauf ----------
   // Auftakt in der Fenstermitte, nach dem Prägen gleitet der Bogen mit dem Zeichen an seinen Platz
-  var PRESS = 3700, PRESS_DUR = 900, SLIDE = 4700, SLIDE_DUR = 1100, REVEAL = 4600, DONE = 6700;
-  // Handy: Zeichen steht über dem Eintrag und gleitet über ihn hinweg, also erst nach dem Gleiten einblenden
-  if (matchMedia('(max-width: 760px)').matches) REVEAL = SLIDE + SLIDE_DUR;
+  // Takt (ms): Zeichnen bis 3,5 s · Prägen 3,6–4,5 s, der Bleistift verblasst gleichzeitig · kurzes Innehalten ·
+  // Gleiten 4,8–6,1 s, sanft anfahren, lang auslaufen · der Eintrag erscheint im Auslaufen, wenn das Zeichen
+  // seinen Weg fast zurückgelegt hat (Desktop und Handy gleich; auf dem Handy ist es dann über dem Text hinaus).
+  var PRESS = 3600, PRESS_DUR = 900, SLIDE = 4800, SLIDE_DUR = 1300, REVEAL = SLIDE + 0.55 * SLIDE_DUR, DONE = 6900;
+  // Gleiten: cubic-bezier(.45, 0, .15, 1)
+  function glide(x) {
+    function c(a, b, t) { return 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t; }
+    var lo = 0, hi = 1, t = x;
+    for (var i = 0; i < 20; i++) { if (c(.45, .15, t) < x) lo = t; else hi = t; t = (lo + hi) / 2; }
+    return c(0, 1, t);
+  }
   var iS = -1e9, playing = false, revealed = true;
   function clamp(v) { return Math.max(0, Math.min(1, v)); }
   function play() {
@@ -203,7 +211,7 @@
       I = Math.min(1, .25 + e / 3200);
       kp = clamp((e - PRESS) / PRESS_DUR); Pp = kp * kp * (3 - 2 * kp);
     }
-    var sp = playing ? clamp((e - SLIDE) / SLIDE_DUR) : 1; sp = sp < .5 ? 4 * sp * sp * sp : 1 - Math.pow(-2 * sp + 2, 3) / 2;
+    var sp = playing ? glide(clamp((e - SLIDE) / SLIDE_DUR)) : 1;
     cur = [off[0] * (1 - sp), off[1] * (1 - sp)];
     var r = rest(), ax = r[0], ay = r[1];
     if (!playing && tx !== null) { ax = tx; ay = ty; }
