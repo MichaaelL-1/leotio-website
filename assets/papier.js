@@ -1,5 +1,5 @@
 /* Leotio – „Papier und Licht“. Startseite: Bühne mit Zeichen. Unterseiten (ohne .zeichen): nur der Bogen, fest im Fenster,
-   die Faser wandert beim Scrollen mit, das Licht steht oben links und folgt Maus oder Finger.
+   die Faser wandert beim Scrollen mit, das Licht steht je nach Tageszeit oben links bis oben rechts und folgt Maus oder Finger.
    Die Seite ist ein Bogen Baumwollpapier (WebGL). Das Zeichen ist vertieft geprägt (Tiefdruck), das Licht steht
    schräg oben links und folgt Maus oder Finger. Auftakt einmal pro Sitzung: Bleistift zeichnet die Konstruktion
    (Außenkontur, Zirkel 1 : √2, Lote, Innenkonturen), das Zeichen wird ins Papier gedrückt, dann erscheint der Druck.
@@ -200,7 +200,25 @@
 
   // ---------- Licht ----------
   var tx = null, ty = null, lx = 0, ly = 0, night = darkQ.matches ? 1 : 0, raf = 0, first = true;
-  function rest() { return sheet ? [box.x, box.y] : [box.x + cur[0] - 0.36 * box.s, box.y + cur[1] - 0.26 * box.s]; }   // schräg oben links, etwa 45 Grad
+  // Licht nach Tageszeit: Es steht bei Sonnenaufgang schräg oben links (wie bisher), mittags über dem Zeichen und
+  // bei Sonnenuntergang schräg oben rechts. Sonnenstand für Düsseldorf (51,2° N, 6,8° O) aus Datum und Weltzeit,
+  // ohne Zeitgleichung; nachts ruht es wieder links. Zum Ansehen: ?licht=0 (Aufgang) bis ?licht=1 (Untergang).
+  function sun() {
+    var m = /[?&]licht=([\d.]+)/.exec(location.search); if (m) return clamp(parseFloat(m[1]) || 0);
+    var d = new Date(), day = (Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5;
+    var dec = -23.44 * Math.cos(2 * Math.PI * (day + 10) / 365) * Math.PI / 180, lat = 51.2 * Math.PI / 180;
+    var half = Math.acos(clamp2(-Math.tan(lat) * Math.tan(dec))) * 12 / Math.PI;   // halbe Tageslänge in Stunden
+    var t = (d.getUTCHours() + d.getUTCMinutes() / 60 - (12 - 6.8 / 15 - half)) / (2 * half);
+    return t < 0 || t > 1 ? 0 : t;
+  }
+  // Tiefe der Prägung: 0,67 seit 10.11.2026 (ein Drittel flacher, näher am echten Tiefdruck). Zum Vergleichen ?tiefe=1 (wie vorher).
+  var TIEFE = (function () { var m = /[?&]tiefe=([\d.]+)/.exec(location.search); return m ? Math.max(.2, Math.min(1.5, parseFloat(m[1]) || 1)) : 0.67; })();
+  function clamp2(v) { return Math.max(-1, Math.min(1, v)); }
+  function rest() {
+    var t = sun(), up = Math.sin(Math.PI * t);
+    if (sheet) return [box.x + t * document.documentElement.clientWidth * .6, box.y];
+    return [box.x + cur[0] + (-0.36 + 1.72 * t) * box.s, box.y + cur[1] - (0.26 + 0.16 * up) * box.s];
+  }
   function kick() { if (!raf) raf = requestAnimationFrame(frame); }
   function frame(now) {
     raf = 0; if (!box) return;
@@ -225,7 +243,7 @@
     gl.uniform2f(U.uOff, sheet ? 0 : -cur[0] * dpr, sheet ? -Math.round(window.scrollY * dpr) : cur[1] * dpr);   // Faser gleitet mit dem Zeichen
     if (sheet) gl.uniform2f(U.uAmb, .9, .3); else gl.uniform2f(U.uAmb, .74, .16);
     gl.uniform3f(U.uL, lx * dpr, H - ly * dpr, Math.max(Math.min(vw, vh) * .42, Math.max(vw, vh) * .3));
-    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp);
+    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp * TIEFE);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (more) kick();
   }
