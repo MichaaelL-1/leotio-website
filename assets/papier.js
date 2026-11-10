@@ -232,6 +232,7 @@
   // bei Sonnenuntergang schräg oben rechts. Sonnenstand für Düsseldorf (51,2° N, 6,8° O) aus Datum und Weltzeit,
   // ohne Zeitgleichung; nachts ruht es wieder links. Zum Ansehen: ?licht=0 (Aufgang) bis ?licht=1 (Untergang).
   function sun() {
+    if (typeof window.LEOTIO_LICHT === 'number') return clamp(window.LEOTIO_LICHT);
     var m = /[?&]licht=([\d.]+)/.exec(location.search); if (m) return clamp(parseFloat(m[1]) || 0);
     var d = new Date(), day = (Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5;
     var dec = -23.44 * Math.cos(2 * Math.PI * (day + 10) / 365) * Math.PI / 180, lat = 51.2 * Math.PI / 180;
@@ -239,8 +240,11 @@
     var t = (d.getUTCHours() + d.getUTCMinutes() / 60 - (12 - 6.8 / 15 - half)) / (2 * half);
     return t < 0 || t > 1 ? 0 : t;
   }
-  // Tiefe der Prägung: 0,67 seit 10.11.2026 (ein Drittel flacher, näher am echten Tiefdruck). Zum Vergleichen ?tiefe=1 (wie vorher).
-  var TIEFE = (function () { var m = /[?&]tiefe=([\d.]+)/.exec(location.search); return m ? Math.max(.2, Math.min(1.5, parseFloat(m[1]) || 1)) : 0.67; })();
+  // Tiefe der Prägung nach Tageszeit: Steht das Licht seitlich (morgens, abends, nachts), wirft die Prägung längere Schatten
+  // und wirkt tiefer. Die Tiefe gleicht das aus: 0,35 bei seitlichem Licht, 0,5 am Mittag (1 = Stand vor dem 10.11.2026).
+  // Zum Vergleichen fest: ?tiefe=0.67 (10.11.) oder ?tiefe=1.
+  var TIEFE = (function () { var m = /[?&]tiefe=([\d.]+)/.exec(location.search); return m ? Math.max(.2, Math.min(1.5, parseFloat(m[1]) || 1)) : 0; })();
+  function tiefe() { return window.LEOTIO_TIEFE || TIEFE || .35 + .15 * Math.sin(Math.PI * sun()); }
   function clamp2(v) { return Math.max(-1, Math.min(1, v)); }
   function rest() {
     var t = sun(), up = Math.sin(Math.PI * t);
@@ -272,7 +276,7 @@
     gl.uniform2f(U.uOff, sheet ? 0 : -cur[0] * dpr, sheet ? -Math.round(window.scrollY * dpr) : cur[1] * dpr);   // Faser gleitet mit dem Zeichen
     if (sheet) gl.uniform2f(U.uAmb, .9, .3); else gl.uniform2f(U.uAmb, .74, .16);
     gl.uniform3f(U.uL, lx * dpr, H - ly * dpr, Math.max(Math.min(vw, vh) * .42, Math.max(vw, vh) * .3));
-    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp * (window.LEOTIO_TIEFE || TIEFE));
+    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp * tiefe());
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (more) kick();
   }
