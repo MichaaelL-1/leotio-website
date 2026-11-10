@@ -211,8 +211,8 @@
     var t = (d.getUTCHours() + d.getUTCMinutes() / 60 - (12 - 6.8 / 15 - half)) / (2 * half);
     return t < 0 || t > 1 ? 0 : t;
   }
-  // Tiefe der Prägung: 1 = wie bisher. Zum Vergleichen ?tiefe=0.67 (ein Drittel flacher).
-  var TIEFE = (function () { var m = /[?&]tiefe=([\d.]+)/.exec(location.search); return m ? Math.max(.2, Math.min(1.5, parseFloat(m[1]) || 1)) : 1; })();
+  // Tiefe der Prägung: 0,67 seit 10.11.2026 (ein Drittel flacher, näher am echten Tiefdruck). Zum Vergleichen ?tiefe=1 (wie vorher).
+  var TIEFE = (function () { var m = /[?&]tiefe=([\d.]+)/.exec(location.search); return m ? Math.max(.2, Math.min(1.5, parseFloat(m[1]) || 1)) : 0.67; })();
   function clamp2(v) { return Math.max(-1, Math.min(1, v)); }
   function rest() {
     var t = sun(), up = Math.sin(Math.PI * t);
