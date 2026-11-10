@@ -187,7 +187,7 @@
     platz: { g: [0, 60, 380], out: [280, 560], dot: 800, arc: [860, 640], dia: null, lot: [1400, 1440, 360], in1: [1700, 560], in2: [1820, 440],
       press: [2300, 800], slide: [3150, 0], done: 3900, ramp: 2100 }
   };
-  var TAKT = 'heute';
+  var TAKT = 'kurz';
   var ST, PRESS, PRESS_DUR, SLIDE, SLIDE_DUR, REVEAL, DONE, RAMP, GLEITEN;
   function takt() {
     ST = TAKTE[window.LEOTIO_TAKT] || TAKTE[TAKT];
@@ -215,7 +215,16 @@
     off = [document.documentElement.clientWidth / 2 - (box.x + box.s / 2), window.scrollY + window.innerHeight / 2 - (box.y + box.s / 2)];
   }
   function reveal() { if (!revealed) { revealed = true; root.classList.remove('intro'); } }
-  function finish() { playing = false; iS = -1e9; anims.forEach(function (a) { a.finish(); }); reveal(); kick(); }
+  // Neu abspielen: Erst geht das Alte. Der Eintrag blendet aus, die Prägung hebt sich aus dem Papier, das Licht nimmt sich zurück.
+  // Nach einem kurzen Innehalten auf dem leeren Bogen beginnt der Bleistift.
+  var leaving = false, lS = 0, lt = 0, LEAVE = 550, LEAVE_GAP = 200;
+  function again() {
+    if (leaving || playing) return;
+    if (reduce) { finish(); return; }
+    leaving = true; lS = performance.now(); revealed = false; root.classList.add('intro', 'abgang'); kick();
+    lt = setTimeout(function () { leaving = false; root.classList.remove('abgang'); play(); }, LEAVE + LEAVE_GAP);
+  }
+  function finish() { clearTimeout(lt); leaving = false; root.classList.remove('abgang'); playing = false; iS = -1e9; anims.forEach(function (a) { a.finish(); }); reveal(); kick(); }
 
   // ---------- Licht ----------
   var tx = null, ty = null, lx = 0, ly = 0, night = darkQ.matches ? 1 : 0, raf = 0, first = true;
@@ -248,6 +257,7 @@
       I = Math.min(1, .25 + e / RAMP);
       kp = clamp((e - PRESS) / PRESS_DUR); Pp = kp * kp * (3 - 2 * kp);
     }
+    if (leaving) { kp = clamp((now - lS) / LEAVE); kp = kp * kp * (3 - 2 * kp); Pp = 1 - kp; I = 1 - .75 * kp; more = true; }
     var sp = playing ? glide(clamp((e - SLIDE) / SLIDE_DUR)) : 1;
     cur = [off[0] * (1 - sp), off[1] * (1 - sp)];
     var r = rest(), ax = r[0], ay = r[1];
@@ -262,7 +272,7 @@
     gl.uniform2f(U.uOff, sheet ? 0 : -cur[0] * dpr, sheet ? -Math.round(window.scrollY * dpr) : cur[1] * dpr);   // Faser gleitet mit dem Zeichen
     if (sheet) gl.uniform2f(U.uAmb, .9, .3); else gl.uniform2f(U.uAmb, .74, .16);
     gl.uniform3f(U.uL, lx * dpr, H - ly * dpr, Math.max(Math.min(vw, vh) * .42, Math.max(vw, vh) * .3));
-    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp * TIEFE);
+    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp * (window.LEOTIO_TIEFE || TIEFE));
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (more) kick();
   }
@@ -279,17 +289,17 @@
   // Überspringen und erneut abspielen
   // Ein Link (außer dem kleinen Logo) öffnet sich auch während des Auftakts sofort
   document.addEventListener('click', function (ev) {
-    if (!playing) return;
+    if (!playing && !leaving) return;
     var a = ev.target.closest && ev.target.closest('a[href]');
     finish();
     if (!a || a.classList.contains('home-link')) { ev.preventDefault(); ev.stopPropagation(); }
   }, true);
-  document.addEventListener('keydown', function () { if (playing) finish(); });
+  document.addEventListener('keydown', function () { if (playing || leaving) finish(); });
   if (!reduce && !sheet) {
     var home = document.querySelector('.top .home-link');
     if (home) home.addEventListener('click', function (e) {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || playing) return;
-      e.preventDefault(); window.scrollTo(0, 0); play();
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || playing || leaving) return;
+      e.preventDefault(); window.scrollTo(0, 0); again();
     });
   }
 
