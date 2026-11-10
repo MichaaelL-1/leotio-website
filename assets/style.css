@@ -172,3 +172,18 @@ html.blatt, html.papier { --line: rgba(32,34,37,.14); }
 body:has(.appbar) > .top, body:has(.appbar) > footer { max-width: 720px; }
 .appname { min-height: 44px; margin: -2px 0; }
 .page p, .page li { text-wrap: pretty; }
+
+/* Design-Review 10.11.2026 */
+/* Dritte Bedeutung statt „Coming soon“: Die Firma erklärt sich im Eintrag. Das rote Quadrat ist das Lesezeichen
+   vor der aktuellen Zeile, 10 px, hängend im Rand. Weiter einmal pro Fläche, nur auf der Startseite. */
+.entry .jetzt { position: relative; margin-top: 6px; color: var(--ink); }
+.entry .jetzt .n { color: var(--ink); }
+.jetzt .punkt { position: absolute; left: -22px; top: .75em; width: 10px; height: 10px; margin: -5px 0 0; }
+.papier .jetzt .punkt { transition: opacity 1s cubic-bezier(.25, .1, .25, 1) .45s; }
+.intro .jetzt .punkt { opacity: 0; transition: none; }
+@media (max-width: 1140px) { .jetzt .punkt { left: -17px; width: 8px; height: 8px; margin-top: -4px; } }
+/* Unterseiten: Überschrift und Text beginnen an derselben linken Kante wie das Logo (vorher 180 px eingerückt) */
+.blatt .page { max-width: 1080px; }
+:where(.blatt .page) > * { max-width: 720px; }
+/* Nacht: Haarlinien auf dem Bogen sichtbar halten */
+@media (prefers-color-scheme: dark) { html.blatt, html.papier { --line: rgba(245,245,243,.17); } }
