@@ -152,21 +152,21 @@
       pg.appendChild(e);
     }
     // Hilfslinien: Kanten des Quadrats, über die Ecken hinaus
-    add('M' + P(-X, 0) + ' L' + P(1 + X, 0), gw, .5, 200, 420); add('M' + P(1, -X) + ' L' + P(1, 1 + X), gw, .5, 330, 420);
-    add('M' + P(1 + X, 1) + ' L' + P(-X, 1), gw, .5, 460, 420); add('M' + P(0, 1 + X) + ' L' + P(0, -X), gw, .5, 590, 420);
+    var G = ST.g; add('M' + P(-X, 0) + ' L' + P(1 + X, 0), gw, .5, G[0], G[2]); add('M' + P(1, -X) + ' L' + P(1, 1 + X), gw, .5, G[0] + G[1], G[2]);
+    add('M' + P(1 + X, 1) + ' L' + P(-X, 1), gw, .5, G[0] + 2 * G[1], G[2]); add('M' + P(0, 1 + X) + ' L' + P(0, -X), gw, .5, G[0] + 3 * G[1], G[2]);
     // Außenkontur
-    add('M' + P(0, 0) + ' L' + P(1, 0) + ' L' + P(1, 1) + ' L' + P(0, 1) + ' Z', cw, .85, 720, 700);
+    add('M' + P(0, 0) + ' L' + P(1, 0) + ' L' + P(1, 1) + ' L' + P(0, 1) + ' Z', cw, .85, ST.out[0], ST.out[1]);
     // Zirkel: Einstich oben rechts, Radius = Seite, Bogen bis zur Diagonalen
     var c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', (x0 + S).toFixed(1)); c.setAttribute('cy', y0.toFixed(1));
     c.setAttribute('r', Math.max(2.5, S * .008)); c.style.strokeWidth = gw; pg.appendChild(c);
-    anims.push(c.animate([{ opacity: 0 }, { opacity: .6 }], { duration: 200, delay: 1400, fill: 'both' }));
-    add('M' + P(1, 1) + ' A' + S.toFixed(1) + ',' + S.toFixed(1) + ' 0 0 1 ' + P(B, Q), gw, .55, 1500, 850);
-    add('M' + P(1, 0) + ' L' + P(B, Q), gw, .45, 2250, 300, (S * .012).toFixed(1) + ' ' + (S * .012).toFixed(1));
+    anims.push(c.animate([{ opacity: 0 }, { opacity: .6 }], { duration: 200, delay: ST.dot, fill: 'both' }));
+    add('M' + P(1, 1) + ' A' + S.toFixed(1) + ',' + S.toFixed(1) + ' 0 0 1 ' + P(B, Q), gw, .55, ST.arc[0], ST.arc[1]);
+    if (ST.dia) add('M' + P(1, 0) + ' L' + P(B, Q), gw, .45, ST.dia[0], ST.dia[1], (S * .012).toFixed(1) + ' ' + (S * .012).toFixed(1));
     // Lote durch den Schnittpunkt = Mittellinien des L
-    add('M' + P(B, -X) + ' L' + P(B, 1 + X), gw, .45, 2400, 420); add('M' + P(-X, Q) + ' L' + P(1 + X, Q), gw, .45, 2480, 420);
+    add('M' + P(B, -X) + ' L' + P(B, 1 + X), gw, .45, ST.lot[0], ST.lot[2]); add('M' + P(-X, Q) + ' L' + P(1 + X, Q), gw, .45, ST.lot[1], ST.lot[2]);
     // Innenkonturen beidseits der Mittellinien
-    add('M' + P(T, T) + ' L' + P(B - T / 2, T) + ' L' + P(B - T / 2, Q + T / 2) + ' L' + P(1 - T, Q + T / 2) + ' L' + P(1 - T, 1 - T) + ' L' + P(T, 1 - T) + ' Z', cw, .85, 2800, 650);
-    add('M' + P(B + T / 2, T) + ' L' + P(1 - T, T) + ' L' + P(1 - T, Q - T / 2) + ' L' + P(B + T / 2, Q - T / 2) + ' Z', cw, .85, 3000, 500);
+    add('M' + P(T, T) + ' L' + P(B - T / 2, T) + ' L' + P(B - T / 2, Q + T / 2) + ' L' + P(1 - T, Q + T / 2) + ' L' + P(1 - T, 1 - T) + ' L' + P(T, 1 - T) + ' Z', cw, .85, ST.in1[0], ST.in1[1]);
+    add('M' + P(B + T / 2, T) + ' L' + P(1 - T, T) + ' L' + P(1 - T, Q - T / 2) + ' L' + P(B + T / 2, Q - T / 2) + ' Z', cw, .85, ST.in2[0], ST.in2[1]);
     // Bleistift verblasst, während das Zeichen ins Papier sinkt
     anims.push(pg.animate([{ opacity: 1 }, { opacity: 0 }], { duration: PRESS_DUR, delay: PRESS, fill: 'both' }));
   }
@@ -176,7 +176,25 @@
   // Takt (ms): Zeichnen bis 3,5 s · Prägen 3,6–4,5 s, der Bleistift verblasst gleichzeitig · kurzes Innehalten ·
   // Gleiten 4,8–6,1 s, sanft anfahren, lang auslaufen · der Eintrag erscheint im Auslaufen, wenn das Zeichen
   // seinen Weg fast zurückgelegt hat (Desktop und Handy gleich; auf dem Handy ist es dann über dem Text hinaus).
-  var PRESS = 3600, PRESS_DUR = 900, SLIDE = 4800, SLIDE_DUR = 1300, REVEAL = SLIDE + 0.55 * SLIDE_DUR, DONE = 6900;
+  // Drei Takte. „heute“ ist der Stand vom 06.11.2026. „kurz“ lässt die gestrichelte Diagonale weg, zieht die
+  // Hilfslinien fast gleichzeitig und streicht die Wartezeiten; jede einzelne Bewegung bleibt fast so ruhig wie heute,
+  // Prägen, Gleiten und Eintrag folgen weiter nacheinander. „platz“ zeichnet gleich am endgültigen Ort, ohne Gleiten.
+  var TAKTE = {
+    heute: { g: [200, 130, 420], out: [720, 700], dot: 1400, arc: [1500, 850], dia: [2250, 300], lot: [2400, 2480, 420], in1: [2800, 650], in2: [3000, 500],
+      press: [3600, 900], slide: [4800, 1300], done: 6900, ramp: 3200 },
+    kurz: { g: [0, 60, 380], out: [280, 560], dot: 800, arc: [860, 640], dia: null, lot: [1400, 1440, 360], in1: [1700, 560], in2: [1820, 440],
+      press: [2300, 800], slide: [3200, 1200], done: 5000, ramp: 2100 },
+    platz: { g: [0, 60, 380], out: [280, 560], dot: 800, arc: [860, 640], dia: null, lot: [1400, 1440, 360], in1: [1700, 560], in2: [1820, 440],
+      press: [2300, 800], slide: [3150, 0], done: 3900, ramp: 2100 }
+  };
+  var TAKT = 'heute';
+  var ST, PRESS, PRESS_DUR, SLIDE, SLIDE_DUR, REVEAL, DONE, RAMP, GLEITEN;
+  function takt() {
+    ST = TAKTE[window.LEOTIO_TAKT] || TAKTE[TAKT];
+    PRESS = ST.press[0]; PRESS_DUR = ST.press[1]; SLIDE = ST.slide[0]; GLEITEN = ST.slide[1] > 0; SLIDE_DUR = ST.slide[1] || 1;
+    REVEAL = SLIDE + 0.55 * SLIDE_DUR; DONE = ST.done; RAMP = ST.ramp;
+  }
+  takt();
   // Gleiten: cubic-bezier(.45, 0, .15, 1)
   function glide(x) {
     function c(a, b, t) { return 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t; }
@@ -189,10 +207,11 @@
   function play() {
     try { sessionStorage.setItem('leotio-intro', '1'); } catch (e) {}
     if (reduce) { finish(); return; }
-    root.classList.add('intro'); revealed = false; playing = true; iS = performance.now(); center(); pencil(); kick();
+    takt(); root.classList.add('intro'); revealed = false; playing = true; iS = performance.now(); center(); pencil(); kick();
   }
   function center() {
     if (!box) return;
+    if (!GLEITEN) { off = [0, 0]; return; }
     off = [document.documentElement.clientWidth / 2 - (box.x + box.s / 2), window.scrollY + window.innerHeight / 2 - (box.y + box.s / 2)];
   }
   function reveal() { if (!revealed) { revealed = true; root.classList.remove('intro'); } }
@@ -226,7 +245,7 @@
     if (playing) {
       if (e >= REVEAL) reveal();
       if (e >= DONE) playing = false; else more = true;
-      I = Math.min(1, .25 + e / 3200);
+      I = Math.min(1, .25 + e / RAMP);
       kp = clamp((e - PRESS) / PRESS_DUR); Pp = kp * kp * (3 - 2 * kp);
     }
     var sp = playing ? glide(clamp((e - SLIDE) / SLIDE_DUR)) : 1;
