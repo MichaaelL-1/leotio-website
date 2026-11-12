@@ -152,21 +152,21 @@
       pg.appendChild(e);
     }
     // Hilfslinien: Kanten des Quadrats, über die Ecken hinaus
-    add('M' + P(-X, 0) + ' L' + P(1 + X, 0), gw, .5, 200, 420); add('M' + P(1, -X) + ' L' + P(1, 1 + X), gw, .5, 330, 420);
-    add('M' + P(1 + X, 1) + ' L' + P(-X, 1), gw, .5, 460, 420); add('M' + P(0, 1 + X) + ' L' + P(0, -X), gw, .5, 590, 420);
+    var G = ST.g; add('M' + P(-X, 0) + ' L' + P(1 + X, 0), gw, .5, G[0], G[2]); add('M' + P(1, -X) + ' L' + P(1, 1 + X), gw, .5, G[0] + G[1], G[2]);
+    add('M' + P(1 + X, 1) + ' L' + P(-X, 1), gw, .5, G[0] + 2 * G[1], G[2]); add('M' + P(0, 1 + X) + ' L' + P(0, -X), gw, .5, G[0] + 3 * G[1], G[2]);
     // Außenkontur
-    add('M' + P(0, 0) + ' L' + P(1, 0) + ' L' + P(1, 1) + ' L' + P(0, 1) + ' Z', cw, .85, 720, 700);
+    add('M' + P(0, 0) + ' L' + P(1, 0) + ' L' + P(1, 1) + ' L' + P(0, 1) + ' Z', cw, .85, ST.out[0], ST.out[1]);
     // Zirkel: Einstich oben rechts, Radius = Seite, Bogen bis zur Diagonalen
     var c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', (x0 + S).toFixed(1)); c.setAttribute('cy', y0.toFixed(1));
     c.setAttribute('r', Math.max(2.5, S * .008)); c.style.strokeWidth = gw; pg.appendChild(c);
-    anims.push(c.animate([{ opacity: 0 }, { opacity: .6 }], { duration: 200, delay: 1400, fill: 'both' }));
-    add('M' + P(1, 1) + ' A' + S.toFixed(1) + ',' + S.toFixed(1) + ' 0 0 1 ' + P(B, Q), gw, .55, 1500, 850);
-    add('M' + P(1, 0) + ' L' + P(B, Q), gw, .45, 2250, 300, (S * .012).toFixed(1) + ' ' + (S * .012).toFixed(1));
+    anims.push(c.animate([{ opacity: 0 }, { opacity: .6 }], { duration: 200, delay: ST.dot, fill: 'both' }));
+    add('M' + P(1, 1) + ' A' + S.toFixed(1) + ',' + S.toFixed(1) + ' 0 0 1 ' + P(B, Q), gw, .55, ST.arc[0], ST.arc[1]);
+    if (ST.dia) add('M' + P(1, 0) + ' L' + P(B, Q), gw, .45, ST.dia[0], ST.dia[1], (S * .012).toFixed(1) + ' ' + (S * .012).toFixed(1));
     // Lote durch den Schnittpunkt = Mittellinien des L
-    add('M' + P(B, -X) + ' L' + P(B, 1 + X), gw, .45, 2400, 420); add('M' + P(-X, Q) + ' L' + P(1 + X, Q), gw, .45, 2480, 420);
+    add('M' + P(B, -X) + ' L' + P(B, 1 + X), gw, .45, ST.lot[0], ST.lot[2]); add('M' + P(-X, Q) + ' L' + P(1 + X, Q), gw, .45, ST.lot[1], ST.lot[2]);
     // Innenkonturen beidseits der Mittellinien
-    add('M' + P(T, T) + ' L' + P(B - T / 2, T) + ' L' + P(B - T / 2, Q + T / 2) + ' L' + P(1 - T, Q + T / 2) + ' L' + P(1 - T, 1 - T) + ' L' + P(T, 1 - T) + ' Z', cw, .85, 2800, 650);
-    add('M' + P(B + T / 2, T) + ' L' + P(1 - T, T) + ' L' + P(1 - T, Q - T / 2) + ' L' + P(B + T / 2, Q - T / 2) + ' Z', cw, .85, 3000, 500);
+    add('M' + P(T, T) + ' L' + P(B - T / 2, T) + ' L' + P(B - T / 2, Q + T / 2) + ' L' + P(1 - T, Q + T / 2) + ' L' + P(1 - T, 1 - T) + ' L' + P(T, 1 - T) + ' Z', cw, .85, ST.in1[0], ST.in1[1]);
+    add('M' + P(B + T / 2, T) + ' L' + P(1 - T, T) + ' L' + P(1 - T, Q - T / 2) + ' L' + P(B + T / 2, Q - T / 2) + ' Z', cw, .85, ST.in2[0], ST.in2[1]);
     // Bleistift verblasst, während das Zeichen ins Papier sinkt
     anims.push(pg.animate([{ opacity: 1 }, { opacity: 0 }], { duration: PRESS_DUR, delay: PRESS, fill: 'both' }));
   }
@@ -176,7 +176,25 @@
   // Takt (ms): Zeichnen bis 3,5 s · Prägen 3,6–4,5 s, der Bleistift verblasst gleichzeitig · kurzes Innehalten ·
   // Gleiten 4,8–6,1 s, sanft anfahren, lang auslaufen · der Eintrag erscheint im Auslaufen, wenn das Zeichen
   // seinen Weg fast zurückgelegt hat (Desktop und Handy gleich; auf dem Handy ist es dann über dem Text hinaus).
-  var PRESS = 3600, PRESS_DUR = 900, SLIDE = 4800, SLIDE_DUR = 1300, REVEAL = SLIDE + 0.55 * SLIDE_DUR, DONE = 6900;
+  // Drei Takte. „heute“ ist der Stand vom 06.11.2026. „kurz“ lässt die gestrichelte Diagonale weg, zieht die
+  // Hilfslinien fast gleichzeitig und streicht die Wartezeiten; jede einzelne Bewegung bleibt fast so ruhig wie heute,
+  // Prägen, Gleiten und Eintrag folgen weiter nacheinander. „platz“ zeichnet gleich am endgültigen Ort, ohne Gleiten.
+  var TAKTE = {
+    heute: { g: [200, 130, 420], out: [720, 700], dot: 1400, arc: [1500, 850], dia: [2250, 300], lot: [2400, 2480, 420], in1: [2800, 650], in2: [3000, 500],
+      press: [3600, 900], slide: [4800, 1300], done: 6900, ramp: 3200 },
+    kurz: { g: [0, 60, 380], out: [280, 560], dot: 800, arc: [860, 640], dia: null, lot: [1400, 1440, 360], in1: [1700, 560], in2: [1820, 440],
+      press: [2300, 800], slide: [3200, 1200], done: 5000, ramp: 2100 },
+    platz: { g: [0, 60, 380], out: [280, 560], dot: 800, arc: [860, 640], dia: null, lot: [1400, 1440, 360], in1: [1700, 560], in2: [1820, 440],
+      press: [2300, 800], slide: [3150, 0], done: 3900, ramp: 2100 }
+  };
+  var TAKT = 'kurz';
+  var ST, PRESS, PRESS_DUR, SLIDE, SLIDE_DUR, REVEAL, DONE, RAMP, GLEITEN;
+  function takt() {
+    ST = TAKTE[window.LEOTIO_TAKT] || TAKTE[TAKT];
+    PRESS = ST.press[0]; PRESS_DUR = ST.press[1]; SLIDE = ST.slide[0]; GLEITEN = ST.slide[1] > 0; SLIDE_DUR = ST.slide[1] || 1;
+    REVEAL = SLIDE + 0.55 * SLIDE_DUR; DONE = ST.done; RAMP = ST.ramp;
+  }
+  takt();
   // Gleiten: cubic-bezier(.45, 0, .15, 1)
   function glide(x) {
     function c(a, b, t) { return 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t; }
@@ -189,14 +207,24 @@
   function play() {
     try { sessionStorage.setItem('leotio-intro', '1'); } catch (e) {}
     if (reduce) { finish(); return; }
-    root.classList.add('intro'); revealed = false; playing = true; iS = performance.now(); center(); pencil(); kick();
+    takt(); root.classList.add('intro'); revealed = false; playing = true; iS = performance.now(); center(); pencil(); kick();
   }
   function center() {
     if (!box) return;
+    if (!GLEITEN) { off = [0, 0]; return; }
     off = [document.documentElement.clientWidth / 2 - (box.x + box.s / 2), window.scrollY + window.innerHeight / 2 - (box.y + box.s / 2)];
   }
   function reveal() { if (!revealed) { revealed = true; root.classList.remove('intro'); } }
-  function finish() { playing = false; iS = -1e9; anims.forEach(function (a) { a.finish(); }); reveal(); kick(); }
+  // Neu abspielen: Erst geht das Alte. Der Eintrag blendet aus, die Prägung hebt sich aus dem Papier, das Licht nimmt sich zurück.
+  // Nach einem kurzen Innehalten auf dem leeren Bogen beginnt der Bleistift.
+  var leaving = false, lS = 0, lt = 0, LEAVE = 550, LEAVE_GAP = 200;
+  function again() {
+    if (leaving || playing) return;
+    if (reduce) { finish(); return; }
+    leaving = true; lS = performance.now(); revealed = false; root.classList.add('intro', 'abgang'); kick();
+    lt = setTimeout(function () { leaving = false; root.classList.remove('abgang'); play(); }, LEAVE + LEAVE_GAP);
+  }
+  function finish() { clearTimeout(lt); leaving = false; root.classList.remove('abgang'); playing = false; iS = -1e9; anims.forEach(function (a) { a.finish(); }); reveal(); kick(); }
 
   // ---------- Licht ----------
   var tx = null, ty = null, lx = 0, ly = 0, night = darkQ.matches ? 1 : 0, raf = 0, first = true;
@@ -204,6 +232,7 @@
   // bei Sonnenuntergang schräg oben rechts. Sonnenstand für Düsseldorf (51,2° N, 6,8° O) aus Datum und Weltzeit,
   // ohne Zeitgleichung; nachts ruht es wieder links. Zum Ansehen: ?licht=0 (Aufgang) bis ?licht=1 (Untergang).
   function sun() {
+    if (typeof window.LEOTIO_LICHT === 'number') return clamp(window.LEOTIO_LICHT);
     var m = /[?&]licht=([\d.]+)/.exec(location.search); if (m) return clamp(parseFloat(m[1]) || 0);
     var d = new Date(), day = (Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5;
     var dec = -23.44 * Math.cos(2 * Math.PI * (day + 10) / 365) * Math.PI / 180, lat = 51.2 * Math.PI / 180;
@@ -211,8 +240,11 @@
     var t = (d.getUTCHours() + d.getUTCMinutes() / 60 - (12 - 6.8 / 15 - half)) / (2 * half);
     return t < 0 || t > 1 ? 0 : t;
   }
-  // Tiefe der Prägung: 0,67 seit 10.11.2026 (ein Drittel flacher, näher am echten Tiefdruck). Zum Vergleichen ?tiefe=1 (wie vorher).
-  var TIEFE = (function () { var m = /[?&]tiefe=([\d.]+)/.exec(location.search); return m ? Math.max(.2, Math.min(1.5, parseFloat(m[1]) || 1)) : 0.67; })();
+  // Tiefe der Prägung nach Tageszeit: Steht das Licht seitlich (morgens, abends, nachts), wirft die Prägung längere Schatten
+  // und wirkt tiefer. Die Tiefe gleicht das aus: 0,35 bei seitlichem Licht, 0,5 am Mittag (1 = Stand vor dem 10.11.2026).
+  // Zum Vergleichen fest: ?tiefe=0.67 (10.11.) oder ?tiefe=1.
+  var TIEFE = (function () { var m = /[?&]tiefe=([\d.]+)/.exec(location.search); return m ? Math.max(.2, Math.min(1.5, parseFloat(m[1]) || 1)) : 0; })();
+  function tiefe() { return window.LEOTIO_TIEFE || TIEFE || .35 + .15 * Math.sin(Math.PI * sun()); }
   function clamp2(v) { return Math.max(-1, Math.min(1, v)); }
   function rest() {
     var t = sun(), up = Math.sin(Math.PI * t);
@@ -226,9 +258,10 @@
     if (playing) {
       if (e >= REVEAL) reveal();
       if (e >= DONE) playing = false; else more = true;
-      I = Math.min(1, .25 + e / 3200);
+      I = Math.min(1, .25 + e / RAMP);
       kp = clamp((e - PRESS) / PRESS_DUR); Pp = kp * kp * (3 - 2 * kp);
     }
+    if (leaving) { kp = clamp((now - lS) / LEAVE); kp = kp * kp * (3 - 2 * kp); Pp = 1 - kp; I = 1 - .75 * kp; more = true; }
     var sp = playing ? glide(clamp((e - SLIDE) / SLIDE_DUR)) : 1;
     cur = [off[0] * (1 - sp), off[1] * (1 - sp)];
     var r = rest(), ax = r[0], ay = r[1];
@@ -243,7 +276,7 @@
     gl.uniform2f(U.uOff, sheet ? 0 : -cur[0] * dpr, sheet ? -Math.round(window.scrollY * dpr) : cur[1] * dpr);   // Faser gleitet mit dem Zeichen
     if (sheet) gl.uniform2f(U.uAmb, .9, .3); else gl.uniform2f(U.uAmb, .74, .16);
     gl.uniform3f(U.uL, lx * dpr, H - ly * dpr, Math.max(Math.min(vw, vh) * .42, Math.max(vw, vh) * .3));
-    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp * TIEFE);
+    gl.uniform1f(U.uI, I); gl.uniform1f(U.uNight, night); gl.uniform1f(U.uDpr, dpr); gl.uniform1f(U.uP, Pp * tiefe());
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (more) kick();
   }
@@ -260,17 +293,17 @@
   // Überspringen und erneut abspielen
   // Ein Link (außer dem kleinen Logo) öffnet sich auch während des Auftakts sofort
   document.addEventListener('click', function (ev) {
-    if (!playing) return;
+    if (!playing && !leaving) return;
     var a = ev.target.closest && ev.target.closest('a[href]');
     finish();
     if (!a || a.classList.contains('home-link')) { ev.preventDefault(); ev.stopPropagation(); }
   }, true);
-  document.addEventListener('keydown', function () { if (playing) finish(); });
+  document.addEventListener('keydown', function () { if (playing || leaving) finish(); });
   if (!reduce && !sheet) {
     var home = document.querySelector('.top .home-link');
     if (home) home.addEventListener('click', function (e) {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || playing) return;
-      e.preventDefault(); window.scrollTo(0, 0); play();
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || playing || leaving) return;
+      e.preventDefault(); window.scrollTo(0, 0); again();
     });
   }
 
