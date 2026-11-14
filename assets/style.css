@@ -190,3 +190,9 @@ body:has(.appbar) > .top, body:has(.appbar) > footer { max-width: 720px; }
 /* Neu abspielen: Eintrag und Lesezeichen blenden zügig aus, bevor der Bleistift beginnt */
 .abgang .hero .text > * { transition-duration: .45s; }
 .abgang .jetzt .punkt { transition: opacity .45s cubic-bezier(.25, .1, .25, 1); }
+
+/* Prüfung 14.11.2026 */
+.page .hinweis { margin: -16px 0 28px; font-size: 13px; }
+.applist .storebtn { line-height: 1.1; }
+.applist .storebtn span { display: block; color: inherit; font-size: 11px; }
+.page .applist a.storebtn { min-height: 44px; font-size: 18px; padding: 4px 14px; }

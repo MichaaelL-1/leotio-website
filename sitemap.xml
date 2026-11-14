@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://leotio.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/de/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/imprint/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/imprint/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/impressum/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/de/impressum/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/imprint/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/impressum/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/datenschutz/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/de/datenschutz/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/datenschutz/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/foldfortune/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/foldfortune/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/foldfortune/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/de/foldfortune/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/foldfortune/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/foldfortune/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/foldfortune/support/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/foldfortune/support/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/foldfortune/support/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/de/foldfortune/support/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/foldfortune/support/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/foldfortune/support/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/foldfortune/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/foldfortune/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/foldfortune/datenschutz/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+  <url>
+    <loc>https://leotio.com/de/foldfortune/datenschutz/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leotio.com/foldfortune/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leotio.com/de/foldfortune/datenschutz/"/>
+    <lastmod>2026-11-14</lastmod>
+  </url>
+</urlset>
