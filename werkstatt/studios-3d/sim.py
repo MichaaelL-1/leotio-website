@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v3.1 · 25.11.2026: echt als Flutwelle (hoher Kamm, Schaum wfo_, Gischt, gefaerbtes Wasser); echt = Pigment stroemt mit dem Wasser (Advektion entlang der Rillen); 25.11.2026: WMODE=...,echt schreibt Wasserhoehe (wat_) und Faerbung (wtn_) fuer einen echten Wasserkoerper in Blender; takt.json 'pulse' = Zeiten der Wasser-Stoesse; 25.11.2026: WMODE=schwall,schaum,aufprall|flut (Wasser-Varianten); SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v3.2 · 25.11.2026: WMODE=aquarell (Spruehnebel, Puder zieht als Farbe ins Papier, Rillen spuelen ruhig frei); v3.1 echt als Flutwelle
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -90,7 +90,7 @@ if VAR=='wasser':   # Weg des Wassers: Laufweite entlang der Rillen ab der Ecke 
         GD[a,b]=0; q.append((a,b))
     while q:
         a,b=q.popleft(); d=GD[a,b]+1
-        for da,db in (((1,0),(-1,0),(0,1),(0,-1),(1,1),(1,-1),(-1,1),(-1,-1)) if 'echt' in os.environ.get('WMODE','') else ((1,0),(-1,0),(0,1),(0,-1))):   # echt: Front steht quer zur Rille
+        for da,db in (((1,0),(-1,0),(0,1),(0,-1),(1,1),(1,-1),(-1,1),(-1,-1)) if ('echt' in os.environ.get('WMODE','') or 'aquarell' in os.environ.get('WMODE','')) else ((1,0),(-1,0),(0,1),(0,-1))):   # echt: Front steht quer zur Rille
             x,y=a+da,b+db
             if 0<=x<R and 0<=y<R and G[x,y] and GD[x,y]<0: GD[x,y]=d; q.append((x,y))
     from scipy.ndimage import maximum_filter
@@ -166,7 +166,7 @@ for f in range(NF):
     S1=1.4+2.4*SOFT; S2=14+8*SOFT; th=gaussian_filter(thick,S1)+0.6*gaussian_filter(thick,S2); cc=np.stack([gaussian_filter(acc[...,q],S1)+0.6*gaussian_filter(acc[...,q],S2) for q in range(3)],-1)
     colr=cc/np.maximum(th,1e-4)[...,None]
     cov=1-np.exp(-th/0.10)
-    fxw=np.zeros((R,R),np.float32); fxg=np.zeros((R,R),np.float32); thick_show=1.0; ext=None
+    fxw=np.zeros((R,R),np.float32); fxg=np.zeros((R,R),np.float32); fxb=np.zeros((R,R),np.float32); thick_show=1.0; ext=None
     if VAR=='rillen':   # am Ende wird der Puder von links nach rechts aus den Rillen geblasen
         prog=np.clip((t-(DUR-2.4))/1.6,0,1); wipe=np.clip((prog*1.4-XS)/0.4,0,1)
         cov=cov*(1-GS*wipe); thick_show=1-GS*wipe
@@ -184,6 +184,39 @@ for f in range(NF):
         dsp=dist[SPI,SPJ]
         ext=sparks(E_['t'],dsp/WS+0.12*SPR,dx/dd*0.16,dy/dd*0.16,0.28+0.3*SPR,0.8,colr,0.25,0.5)
         if ext is not None: ext=(ext[0],ext[1],ext[2]*0.55)
+    elif VAR=='wasser' and TCLR is not None and 'aquarell' in WM:   # Aquarell: Nebel benetzt alles; auf der Flaeche zieht das Pigment ein, in den Rillen sammelt sich das Wasser und laeuft ab
+        a_=t-TCLR; PT=[p_/SL-TCLR for p_ in TK['pulse']] if TK.get('pulse') else [0.0,0.68,1.15]
+        wet=np.clip((np.clip(a_/0.55,0,1.25)*1.3-NZ)/0.18,0,1) if a_>0 else np.zeros((R,R),np.float32)      # Tropfen-Sprenkel, die sich schliessen
+        bl=float(np.clip((a_-0.15)/1.2,0,1)); dry=float(np.clip((a_-PT[2]-0.5)/0.9,0,1))
+        cov0=cov.copy(); sg=1+7*bl
+        if bl>0:   # Farbe verlaeuft und saettigt sich
+            cb=gaussian_filter(cov0,sg); colb=np.stack([gaussian_filter(colr[...,q]*cov0,sg) for q in range(3)],-1)/np.maximum(cb,1e-3)[...,None]
+            colr=colr*(1-bl)+colb*bl; cov=np.clip(np.maximum(cov0,cb*1.15),0,1)
+        gam=1+0.55*wet*(1-dry)+0.22*wet*dry
+        colr=np.clip(colr,0,1)**gam[...,None]
+        thick_show=1-0.92*wet                                                   # Puderschicht sinkt ein: glatte gefaerbte Flaeche
+        fxb=wet*(1-GS)*(1-dry)                                                  # nasser Glanz auf der Flaeche, trocknet matt
+        f1=np.clip((a_-0.25-0.12*NZ2)/0.45,0,1)                                  # Puder in der Rille loest sich
+        cov=cov*(1-GS)+cov*(1-f1)*GS
+        lvl=float(np.clip((a_-PT[1]+0.15)/0.40,0,1)); dn=float(np.clip((a_-PT[2]-0.25)/0.8,0,1))
+        on=G&(lvl>0)
+        hw=(0.62+0.10*(NZ2-0.5)+0.05*np.sin(6.283*(GD/60.0-a_*1.5)))*lvl*(1-dn)**1.5
+        np.save(f'{OUT}/wat_{f:04d}.npy',gaussian_filter(np.where(on,hw,0).astype(np.float32),1.2).reshape(R//2,2,R//2,2).mean((1,3)).astype(np.float16))
+        vv=(220*lvl+60)*on/FPS                                                  # ruhiger Abfluss entlang der Rille
+        if on.any(): WT=np.stack([map_coordinates(WT[...,q],[II-FY*vv,JJ-FX*vv],order=1,mode='nearest') for q in range(4)],-1)*G[...,None]
+        if a_>0:
+            sr=GS*np.clip(1-np.abs(a_-0.35-0.5*NZ2)/0.3,0,1)/FPS*3.0             # geloester Puder + Ablauf von der Flaeche faerbt das Wasser
+            cs=np.stack([gaussian_filter(colr[...,q]*cov0,10) for q in range(3)],-1)/np.maximum(gaussian_filter(cov0,10),1e-3)[...,None]
+            WT[...,:3]+=cs*sr[...,None]; WT[...,3]+=sr
+            WT=np.stack([gaussian_filter(WT[...,q],1.6) for q in range(4)],-1)*G[...,None]; WT*=1-(0.25+1.2*dn)/FPS
+        tn=WT[...,:3]/np.maximum(WT[...,3:4],1e-3); ta=np.clip(0.25+WT[...,3]*1.4,0,1)*(1-dn)*on
+        Image.fromarray((np.concatenate([np.clip(tn,0,1),ta[...,None]],-1)*255).astype(np.uint8),'RGBA').save(f'{OUT}/wtn_{f:04d}.png')
+        Image.fromarray(np.zeros((R,R),np.uint8)).save(f'{OUT}/wfo_{f:04d}.png')
+        env=float(np.clip((a_+0.12)/0.15,0,1)*np.clip(1-(a_-0.45)/0.3,0,1))     # sichtbarer Spruehnebel, nur ueber dem Quadrat
+        if env>0:
+            m=int(9000*env); zz=rng.uniform(0.01,0.45,m); li=0.97*(1-zz/CAMZ0)
+            pp=np.stack([rng.uniform(-1,1,m)*li,rng.uniform(-1,1,m)*li,zz],1).astype(np.float32)
+            P.append(pp); C.append(np.tile(np.array([0.93,0.96,1.0],np.float32),(m,1))); RR.append(np.full(m,0.0016,np.float32))
     elif VAR=='wasser' and TCLR is not None and WM:   # Wasser-Varianten: schwall (im Takt), schaum (helle Front), aufprall (Spritzer am Treffpunkt), flut (fuellen und Sog)
         a_=t-TCLR; BT=60.0/TK.get('bpm',90)/SL; gsp=GD[SPI,SPJ]
         if 'flut' in WM:
@@ -258,6 +291,6 @@ for f in range(NF):
     Image.fromarray((rgba*255).astype(np.uint8),'RGBA').save(f'{OUT}/dep_{f:04d}.png')
     hh=np.clip(gaussian_filter(thick,1.2)/6.0,0,1)*thick_show
     Image.fromarray((hh*65535).astype(np.uint16)).save(f'{OUT}/hgt_{f:04d}.png')
-    Image.fromarray((np.stack([fxw,fxg,np.zeros_like(fxw)],-1)*255).astype(np.uint8)).save(f'{OUT}/fx_{f:04d}.png')
+    Image.fromarray((np.stack([fxw,fxg,fxb],-1)*255).astype(np.uint8)).save(f'{OUT}/fx_{f:04d}.png')
     if f%24==0: print(f,'fliegt',len(fl),'liegt',int((state==2).sum()),'bedeckt',float((cov>0.9).mean()),flush=True)
 print('fertig')

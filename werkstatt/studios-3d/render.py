@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v1.7 · 25.11.2026: Schaumkarte wfo_; 25.11.2026: echter Wasserkoerper (wat_/wtn_ aus sim.py), eigenes Flaechenlicht nur fuers Wasser; Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
+# Leotio Studios 3D-Render v1.8 · 25.11.2026: fx-Kanal B = nasse Flaeche (Glanz, Aquarell); v1.7 Schaumkarte wfo_, echter Wasserkoerper
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -49,7 +49,9 @@ bsdf.inputs['Emission Color'].default_value=(1.0,0.80,0.48,1); Lk.new(emis.outpu
 rough=N.new('ShaderNodeMath'); rough.operation='MULTIPLY_ADD'; rough.inputs[1].default_value=0.13; rough.inputs[2].default_value=0.85
 Lk.new(imgD.outputs['Alpha'],rough.inputs[0])
 rwet=N.new('ShaderNodeMath'); rwet.operation='MULTIPLY_ADD'; rwet.inputs[1].default_value=-0.8; rwet.use_clamp=True
-Lk.new(sepF.outputs['Red'],rwet.inputs[0]); Lk.new(rough.outputs[0],rwet.inputs[2]); Lk.new(rwet.outputs[0],bsdf.inputs['Roughness'])
+Lk.new(sepF.outputs['Red'],rwet.inputs[0]); Lk.new(rough.outputs[0],rwet.inputs[2])
+rwb=N.new('ShaderNodeMath'); rwb.operation='MULTIPLY_ADD'; rwb.inputs[1].default_value=-float(os.environ.get('WGLANZ','0.62')); rwb.use_clamp=True
+Lk.new(sepF.outputs['Blue'],rwb.inputs[0]); Lk.new(rwet.outputs[0],rwb.inputs[2]); Lk.new(rwb.outputs[0],bsdf.inputs['Roughness'])
 # Relief der Puderschicht: Hoehenkarte + Korn
 old_bump=[n for n in N if n.type=='BUMP'][0]
 h_add=N.new('ShaderNodeMath'); h_add.operation='MULTIPLY_ADD'; h_add.inputs[2].default_value=0
