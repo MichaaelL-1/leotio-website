@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v2.1 · 25.11.2026: DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v2.2 · 25.11.2026: DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -143,7 +143,7 @@ for f in range(NF):
     zc=np.clip(pos[fl,2:3]/0.25,0,1)*HT; P=[pos[fl]]; C=[pcol[fl]*(1-zc)+zc]; RR=[rad[fl]]
     for e,E in enumerate(EX):
         dtm=E['t']-t
-        if 0<dtm<0.7:
+        if 0<dtm<0.7 and not os.environ.get('NOFALL'):   # NOFALL: kein sichtbares fallendes Paket vor dem Einschlag
             m=int(2500*SC*SC); sl=np.arange(e*NP,e*NP+m)
             jit=rng.normal(0,1,(m,3)).astype(np.float32)*np.array([0.03*SC,0.03*SC,0.03*SC+dtm*0.08],np.float32)
             zz=FALL*dtm; CAMZ=2.0*1920/560*50/36
