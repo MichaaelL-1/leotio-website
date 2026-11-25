@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v2.7 · 25.11.2026: WMODE=schwall,schaum,aufprall|flut (Wasser-Varianten); SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v2.8 · 25.11.2026: takt.json 'pulse' = Zeiten der Wasser-Stoesse; 25.11.2026: WMODE=schwall,schaum,aufprall|flut (Wasser-Varianten); SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -181,10 +181,10 @@ for f in range(NF):
     elif VAR=='wasser' and TCLR is not None and WM:   # Wasser-Varianten: schwall (im Takt), schaum (helle Front), aufprall (Spritzer am Treffpunkt), flut (fuellen und Sog)
         a_=t-TCLR; BT=60.0/TK.get('bpm',90)/SL; gsp=GD[SPI,SPJ]
         if 'flut' in WM:
-            sp=GDM/0.7; arr=GD/sp; arrH=GDH/sp; TS=3*BT
+            sp=GDM/0.7; arr=GD/sp; arrH=GDH/sp; TS=(TK['pulse'][-1]/SL-TCLR) if TK.get('pulse') else 3*BT
             f1=np.clip((a_-arr)/0.05,0,1); r=np.clip((a_-TS)/0.25,0,1)
             keep=np.clip((GDM*(1-r*r)-GD)/40+0.5,0,1)*(1-np.clip((a_-TS-0.25)/0.1,0,1))
-            b=np.clip((a_-0.7)/0.4,0,1); dry=np.clip((a_-TS-0.3)/0.9,0,1)
+            b=np.clip((a_-0.7)/0.4,0,1); dry=np.clip((a_-TS-0.3)/0.6,0,1)
             covg=cov*(1-f1)+0.6*f1*keep
             cov=cov*(1-GS)+covg*GS; thick_show=1-GS*f1
             fxw=np.maximum(GS*f1*keep,np.clip(HAL-GS,0,1)*b*np.clip((a_-arrH)/0.05,0,1)*(1-dry))
@@ -194,12 +194,12 @@ for f in range(NF):
         else:
             if 'schwall' in WM:   # 3 Stoesse, je einer pro Schlag
                 FR=GDM+80; seg=FR/3; PD=0.16
-                fr=sum(seg*np.clip((a_-k_*BT)/PD,0,1) for k_ in range(3))
-                kk=np.clip(np.floor(GD/seg),0,2); arr=kk*BT+PD*(GD-kk*seg)/seg
-                kq=np.clip(np.floor(gsp/seg),0,2); arrs=kq*BT+PD*(gsp-kq*seg)/seg
+                PT=np.array([p_/SL-TCLR for p_ in TK['pulse']],np.float32) if TK.get('pulse') else np.arange(3,dtype=np.float32)*BT   # Stoesse auf den Schlaegen der Musik
+                kk=np.clip(np.floor(GD/seg),0,2).astype(int); arr=PT[kk]+PD*(GD-kk*seg)/seg
+                kq=np.clip(np.floor(gsp/seg),0,2).astype(int); arrs=PT[kq]+PD*(gsp-kq*seg)/seg
             else:
                 sp=GDM/1.25; fr=a_*sp; arr=GD/sp; arrs=gsp/sp
-            f1=np.clip((a_-arr)/0.05,0,1); f2=np.clip((a_-arr-0.10)/0.5,0,1); dr=np.clip((a_-arr-1.2)/0.5,0,1)
+            f1=np.clip((a_-arr)/0.05,0,1); f2=np.clip((a_-arr-0.10)/0.5,0,1); dr=np.clip((a_-arr-0.7)/0.4,0,1)
             covg=cov*(1-f1)+0.6*f1*(1-f2)
             cov=cov*(1-GS)+covg*GS; thick_show=1-GS*f1
             fxw=GS*f1*(1-dr)
