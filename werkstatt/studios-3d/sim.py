@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v1.7 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v1.8 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -18,6 +18,7 @@ def grooves():
         g[int(y/200*R):int((y+hh)/200*R), int(x/200*R):int((x+ww)/200*R)]=True
     return g
 G=grooves()
+GS=np.clip(gaussian_filter(G.astype(np.float32),1.5)*1.3,0,1); XS=np.linspace(0,1,R,dtype=np.float32)[None,:]
 def hgt(x,y):
     i=np.clip(((1-y)/2*R).astype(int),0,R-1); j=np.clip(((x+1)/2*R).astype(int),0,R-1)
     return np.where(G[i,j],-D,0.0)
@@ -30,6 +31,11 @@ for n,ci in enumerate(order[:NEX]):
     cx,cy=cells[ci]
     t0=1.1+n*float(os.environ.get('GAP','0.33'))*12/NEX+rng.uniform(-0.08,0.08)
     EX.append(dict(p=np.array([cx+rng.uniform(-0.2,0.2),cy+rng.uniform(-0.2,0.2)]),t=t0,c=n%len(pal),lob=int(rng.integers(5,11)),phi=rng.uniform(0,6.3)))
+VAR=os.environ.get('VAR','')
+if VAR=='schlag':      # alle Pakete fast gleichzeitig
+    for e in EX: e['t']=1.0+float(rng.uniform(0,0.35))
+if VAR=='farben':      # Farbe fuer Farbe, je 2 Pakete
+    for n,e in enumerate(EX): e['c']=(n//2)%len(pal); e['t']=1.0+(n//2)*0.75+(n%2)*0.12
 if os.environ.get('ONE'):   # Einzelne Explosion fuer Nahaufnahme: ONE=x,y,t,farbindex
     x_,y_,t_,c_=os.environ['ONE'].split(',')
     EX=[dict(p=np.array([float(x_),float(y_)]),t=float(t_),c=int(c_),lob=7,phi=0.4)]
@@ -111,9 +117,13 @@ for f in range(NF):
     th=gaussian_filter(thick,1.4)+0.6*gaussian_filter(thick,14); cc=np.stack([gaussian_filter(acc[...,q],1.4)+0.6*gaussian_filter(acc[...,q],14) for q in range(3)],-1)
     colr=cc/np.maximum(th,1e-4)[...,None]
     cov=1-np.exp(-th/0.10)
+    if VAR=='rillen':   # am Ende wird der Puder von links nach rechts aus den Rillen geblasen
+        prog=np.clip((t-(DUR-2.4))/1.6,0,1); wipe=np.clip((prog*1.4-XS)/0.4,0,1)
+        cov=cov*(1-GS*wipe); thick_show=1-GS*wipe
+    else: thick_show=1.0
     rgba=np.concatenate([np.clip(colr,0,1),cov[...,None]],-1)
     Image.fromarray((rgba*255).astype(np.uint8),'RGBA').save(f'{OUT}/dep_{f:04d}.png')
-    hh=np.clip(gaussian_filter(thick,1.2)/6.0,0,1)
+    hh=np.clip(gaussian_filter(thick,1.2)/6.0,0,1)*thick_show
     Image.fromarray((hh*65535).astype(np.uint16)).save(f'{OUT}/hgt_{f:04d}.png')
     if f%24==0: print(f,'fliegt',len(fl),'liegt',int((state==2).sum()),'bedeckt',float((cov>0.9).mean()),flush=True)
 print('fertig')
