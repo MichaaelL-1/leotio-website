@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v3.2 · 25.11.2026: WMODE=aquarell (Spruehnebel, Puder zieht als Farbe ins Papier, Rillen spuelen ruhig frei); v3.1 echt als Flutwelle
+# Leotio Studios Puder-Simulation v3.3 · 25.11.2026: WMODE=aquarell,welle (Wasser spuelt aus 4 Ecken ueber das ganze Quadrat, Flaeche behaelt die Farbe, Rillen werden frei); v3.2 aquarell
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -186,8 +186,18 @@ for f in range(NF):
         if ext is not None: ext=(ext[0],ext[1],ext[2]*0.55)
     elif VAR=='wasser' and TCLR is not None and 'aquarell' in WM:   # Aquarell: Nebel benetzt alles; auf der Flaeche zieht das Pigment ein, in den Rillen sammelt sich das Wasser und laeuft ab
         a_=t-TCLR; PT=[p_/SL-TCLR for p_ in TK['pulse']] if TK.get('pulse') else [0.0,0.68,1.15]
-        wet=np.clip((np.clip(a_/0.55,0,1.25)*1.3-NZ)/0.18,0,1) if a_>0 else np.zeros((R,R),np.float32)      # Tropfen-Sprenkel, die sich schliessen
-        bl=float(np.clip((a_-0.15)/1.2,0,1)); dry=float(np.clip((a_-PT[2]-0.5)/0.9,0,1))
+        WEL='welle' in WM
+        if WEL:   # Wasser spuelt in 2 Wellen aus den 4 Ecken ueber die ganze Flaeche, bleibt im Quadrat
+            dc=np.minimum(np.minimum(np.hypot(XX+1,YY+1),np.hypot(XX-1,YY+1)),np.minimum(np.hypot(XX+1,YY-1),np.hypot(XX-1,YY-1)))/1.414+0.22*(NZ2-0.5)
+            ag1=a_-dc*0.50; ag2=a_-PT[1]-dc*0.40
+            wet=np.clip(ag1/0.04,0,1).astype(np.float32)
+            film=sum((0.9*np.exp(-np.clip(g_,0,None)/0.05)+0.30*np.exp(-np.clip(g_,0,None)/0.45))*(g_>0) for g_ in (ag1,ag2))
+            fo=np.clip(sum(1.15*np.exp(-np.clip(g_,0,None)/0.035)*(g_>0) for g_ in (ag1,ag2))-0.8*NZ,0,1)*0.8   # schmale, aufgerissene Schaumkante
+            T3=PT[2]+0.05; DL=0.45
+        else:
+            wet=np.clip((np.clip(a_/0.55,0,1.25)*1.3-NZ)/0.18,0,1) if a_>0 else np.zeros((R,R),np.float32)      # Tropfen-Sprenkel, die sich schliessen
+            T3=PT[2]+0.25; DL=0.8
+        bl=float(np.clip((a_-0.15)/1.2,0,1)); dry=float(np.clip((a_-T3-0.1)/(DL+0.1),0,1))
         cov0=cov.copy(); sg=1+7*bl
         if bl>0:   # Farbe verlaeuft und saettigt sich
             cb=gaussian_filter(cov0,sg); colb=np.stack([gaussian_filter(colr[...,q]*cov0,sg) for q in range(3)],-1)/np.maximum(cb,1e-3)[...,None]
@@ -198,10 +208,14 @@ for f in range(NF):
         fxb=wet*(1-GS)*(1-dry)                                                  # nasser Glanz auf der Flaeche, trocknet matt
         f1=np.clip((a_-0.25-0.12*NZ2)/0.45,0,1)                                  # Puder in der Rille loest sich
         cov=cov*(1-GS)+cov*(1-f1)*GS
-        lvl=float(np.clip((a_-PT[1]+0.15)/0.40,0,1)); dn=float(np.clip((a_-PT[2]-0.25)/0.8,0,1))
+        lvl=float(np.clip((a_-(0.1 if WEL else PT[1]-0.15))/0.40,0,1)); dn=float(np.clip((a_-T3)/DL,0,1))
         on=G&(lvl>0)
         hw=(0.62+0.10*(NZ2-0.5)+0.05*np.sin(6.283*(GD/60.0-a_*1.5)))*lvl*(1-dn)**1.5
-        np.save(f'{OUT}/wat_{f:04d}.npy',gaussian_filter(np.where(on,hw,0).astype(np.float32),1.2).reshape(R//2,2,R//2,2).mean((1,3)).astype(np.float16))
+        hw=np.where(on,hw,0).astype(np.float32); sheet=np.zeros((R,R),np.float32)
+        if WEL:
+            film=(film*(1-dn)).astype(np.float32); sheet=np.clip((film-0.03)/0.05,0,1)
+            hw=np.maximum(hw,np.where(film>0.03,1.09+0.45*film,0)).astype(np.float32)
+        np.save(f'{OUT}/wat_{f:04d}.npy',gaussian_filter(hw,1.2).reshape(R//2,2,R//2,2).mean((1,3)).astype(np.float16))
         vv=(220*lvl+60)*on/FPS                                                  # ruhiger Abfluss entlang der Rille
         if on.any(): WT=np.stack([map_coordinates(WT[...,q],[II-FY*vv,JJ-FX*vv],order=1,mode='nearest') for q in range(4)],-1)*G[...,None]
         if a_>0:
@@ -209,10 +223,10 @@ for f in range(NF):
             cs=np.stack([gaussian_filter(colr[...,q]*cov0,10) for q in range(3)],-1)/np.maximum(gaussian_filter(cov0,10),1e-3)[...,None]
             WT[...,:3]+=cs*sr[...,None]; WT[...,3]+=sr
             WT=np.stack([gaussian_filter(WT[...,q],1.6) for q in range(4)],-1)*G[...,None]; WT*=1-(0.25+1.2*dn)/FPS
-        tn=WT[...,:3]/np.maximum(WT[...,3:4],1e-3); ta=np.clip(0.25+WT[...,3]*1.4,0,1)*(1-dn)*on
+        tn=WT[...,:3]/np.maximum(WT[...,3:4],1e-3); ta=np.maximum(np.clip(0.25+WT[...,3]*1.4,0,1)*(1-dn)*on,0.10*sheet*(1-GS))
         Image.fromarray((np.concatenate([np.clip(tn,0,1),ta[...,None]],-1)*255).astype(np.uint8),'RGBA').save(f'{OUT}/wtn_{f:04d}.png')
-        Image.fromarray(np.zeros((R,R),np.uint8)).save(f'{OUT}/wfo_{f:04d}.png')
-        env=float(np.clip((a_+0.12)/0.15,0,1)*np.clip(1-(a_-0.45)/0.3,0,1))     # sichtbarer Spruehnebel, nur ueber dem Quadrat
+        Image.fromarray(((np.clip(gaussian_filter((fo*sheet).astype(np.float32),1.0),0,1) if WEL else np.zeros((R,R),np.float32))*255).astype(np.uint8)).save(f'{OUT}/wfo_{f:04d}.png')
+        env=0.0 if WEL else float(np.clip((a_+0.12)/0.15,0,1)*np.clip(1-(a_-0.45)/0.3,0,1))     # sichtbarer Spruehnebel, nur ueber dem Quadrat
         if env>0:
             m=int(9000*env); zz=rng.uniform(0.01,0.45,m); li=0.97*(1-zz/CAMZ0)
             pp=np.stack([rng.uniform(-1,1,m)*li,rng.uniform(-1,1,m)*li,zz],1).astype(np.float32)
