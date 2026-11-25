@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v1.5 · 25.11.2026: Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
+# Leotio Studios 3D-Render v1.6 · 25.11.2026: echter Wasserkoerper (wat_/wtn_ aus sim.py), eigenes Flaechenlicht nur fuers Wasser; Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -80,6 +80,43 @@ pb.inputs['Alpha'].default_value=float(os.environ.get('PALPHA','0.45'))
 pb.inputs['Specular IOR Level'].default_value=0.0
 pb.inputs['Subsurface Weight'].default_value=0.3 if 'Subsurface Weight' in pb.inputs else 0
 sm.inputs['Material'].default_value=pm
+# --- Wasserkoerper: Hoehenfeld ueber dem Quadrat, liegt trocken unter dem Rillenboden
+WG=512; HAVEW=any(os.path.exists(f'{SIM}/wat_{f:04d}.npy') for f in frames)
+if HAVEW:
+    DG=scene.D
+    xs=np.linspace(-1,1,WG,dtype=np.float32); gx,gy=np.meshgrid(xs,xs[::-1])     # Zeile 0 = y +1 (wie die Karten)
+    wme=bpy.data.meshes.new('Wasser'); wob=bpy.data.objects.new('Wasser',wme); bpy.context.collection.objects.link(wob)
+    co=np.stack([gx,gy,np.full_like(gx,-DG-0.01)],-1).reshape(-1,3)
+    ii=np.arange(WG*WG).reshape(WG,WG); q=np.stack([ii[:-1,:-1],ii[1:,:-1],ii[1:,1:],ii[:-1,1:]],-1).reshape(-1,4)
+    wme.vertices.add(len(co)); wme.vertices.foreach_set('co',co.ravel())
+    wme.loops.add(q.size); wme.loops.foreach_set('vertex_index',q.ravel())
+    wme.polygons.add(len(q)); wme.polygons.foreach_set('loop_start',np.arange(0,q.size,4)); wme.polygons.foreach_set('loop_total',np.full(len(q),4))
+    wme.update(); wme.polygons.foreach_set('use_smooth',np.ones(len(q),bool)); wob.visible_shadow=False
+    wm_=bpy.data.materials.new('Wasser'); wm_.use_nodes=True; wn=wm_.node_tree.nodes; wl=wm_.node_tree.links; wb=wn['Principled BSDF']
+    wg=wn.new('ShaderNodeNewGeometry'); ws=wn.new('ShaderNodeSeparateXYZ'); wl.new(wg.outputs['Position'],ws.inputs[0])
+    def wlin(inp):
+        m=wn.new('ShaderNodeMath'); m.operation='MULTIPLY_ADD'; m.inputs[1].default_value=0.5; m.inputs[2].default_value=0.5; wl.new(inp,m.inputs[0]); return m
+    wc=wn.new('ShaderNodeCombineXYZ'); wl.new(wlin(ws.outputs['X']).outputs[0],wc.inputs['X']); wl.new(wlin(ws.outputs['Y']).outputs[0],wc.inputs['Y'])
+    imgT=wn.new('ShaderNodeTexImage'); imgT.extension='EXTEND'; wl.new(wc.outputs[0],imgT.inputs['Vector'])
+    tm=wn.new('ShaderNodeMix'); tm.data_type='RGBA'; tm.inputs['A'].default_value=(0.86,0.94,1.0,1)
+    wl.new(imgT.outputs['Alpha'],tm.inputs['Factor']); wl.new(imgT.outputs['Color'],tm.inputs['B']); wl.new(tm.outputs['Result'],wb.inputs['Base Color'])
+    tw=wn.new('ShaderNodeMath'); tw.operation='MULTIPLY_ADD'; tw.inputs[1].default_value=-float(os.environ.get('WOPAK','0.55')); tw.inputs[2].default_value=1.0
+    wl.new(imgT.outputs['Alpha'],tw.inputs[0]); wl.new(tw.outputs[0],wb.inputs['Transmission Weight'])
+    wb.inputs['IOR'].default_value=1.333; wb.inputs['Roughness'].default_value=0.03
+    wnz=wn.new('ShaderNodeTexNoise'); wnz.noise_dimensions='4D'; wnz.inputs['Scale'].default_value=float(os.environ.get('WRIP','38')); wnz.inputs['Detail'].default_value=2
+    wbp=wn.new('ShaderNodeBump'); wbp.inputs['Strength'].default_value=float(os.environ.get('WBUMP','0.35')); wbp.inputs['Distance'].default_value=0.004
+    wl.new(wnz.outputs['Fac'],wbp.inputs['Height']); wl.new(wbp.outputs['Normal'],wb.inputs['Normal'])
+    for k_,v_ in (('use_raytrace_refraction',True),('use_transparency_overlap',False)):
+        try: setattr(wm_,k_,v_)
+        except Exception: pass
+    try: sc.eevee.use_raytracing=True
+    except Exception: pass
+    wme.materials.append(wm_)
+    # Flaechenlicht ueber der Kamera-Achse, nur fuer das Wasser: gibt den Glanz auf dem Spiegel, das Papier bleibt wie es ist
+    bpy.ops.object.light_add(type='AREA',location=tuple(float(v) for v in os.environ.get('WLPOS','0.35,0.5,3.2').split(','))); WL=bpy.context.active_object; WL.data.size=float(os.environ.get('WLSIZE','2.2')); WL.data.energy=float(os.environ.get('WLIGHT','260'))
+    try:
+        col_=bpy.data.collections.new('NurWasser'); col_.objects.link(wob); WL.light_linking.receiver_collection=col_
+    except Exception as e_: print('light linking fehlt',e_)
 for f in frames:
     z=np.load(f'{SIM}/pts_{f:04d}.npz'); P=z['p']; C=z['c'].astype(np.float32); Rr=z['r'].astype(np.float32)
     me.clear_geometry()
@@ -93,6 +130,16 @@ for f in frames:
         if not os.path.exists(img): continue
         if node.image: bpy.data.images.remove(node.image)
         node.image=bpy.data.images.load(os.path.abspath(img)); node.image.colorspace_settings.name=cs
+    if HAVEW:
+        wp=f'{SIM}/wat_{f:04d}.npy'; zz=np.full(WG*WG,-DG-0.01,np.float32)
+        if os.path.exists(wp):
+            hh_=np.load(wp).astype(np.float32)
+            zz=np.where(hh_>0.03,-DG+hh_*DG*float(os.environ.get('WFILL','0.92')),-DG-0.01).astype(np.float32).ravel()
+            tp=f'{SIM}/wtn_{f:04d}.png'
+            if imgT.image: bpy.data.images.remove(imgT.image)
+            imgT.image=bpy.data.images.load(os.path.abspath(tp)); imgT.image.colorspace_settings.name='sRGB'; imgT.image.alpha_mode='CHANNEL_PACKED'
+        co[:,2]=zz; wme.vertices.foreach_set('co',co.ravel()); wme.update()
+        wnz.inputs['W'].default_value=f*0.06
     sc.render.filepath=f'{OUTD}/f_{f:04d}.png'
     bpy.ops.render.render(write_still=True)
     print('frame',f,'punkte',n,flush=True)
