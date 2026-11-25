@@ -99,12 +99,13 @@ if HAVEW:
     wc=wn.new('ShaderNodeCombineXYZ'); wl.new(wlin(ws.outputs['X']).outputs[0],wc.inputs['X']); wl.new(wlin(ws.outputs['Y']).outputs[0],wc.inputs['Y'])
     imgT=wn.new('ShaderNodeTexImage'); imgT.extension='EXTEND'; wl.new(wc.outputs[0],imgT.inputs['Vector'])
     tm=wn.new('ShaderNodeMix'); tm.data_type='RGBA'; tm.inputs['A'].default_value=(0.86,0.94,1.0,1)
-    wl.new(imgT.outputs['Alpha'],tm.inputs['Factor']); wl.new(imgT.outputs['Color'],tm.inputs['B']); wl.new(tm.outputs['Result'],wb.inputs['Base Color'])
-    tw=wn.new('ShaderNodeMath'); tw.operation='MULTIPLY_ADD'; tw.inputs[1].default_value=-float(os.environ.get('WOPAK','0.55')); tw.inputs[2].default_value=1.0
+    wgm=wn.new('ShaderNodeGamma'); wgm.inputs['Gamma'].default_value=float(os.environ.get('WSAT','1.25')); wl.new(imgT.outputs['Color'],wgm.inputs['Color'])   # kraeftigere Farbe: Pigment im Wasser
+    wl.new(imgT.outputs['Alpha'],tm.inputs['Factor']); wl.new(wgm.outputs['Color'],tm.inputs['B']); wl.new(tm.outputs['Result'],wb.inputs['Base Color'])
+    tw=wn.new('ShaderNodeMath'); tw.operation='MULTIPLY_ADD'; tw.inputs[1].default_value=-float(os.environ.get('WOPAK','0.15')); tw.inputs[2].default_value=1.0
     wl.new(imgT.outputs['Alpha'],tw.inputs[0]); wl.new(tw.outputs[0],wb.inputs['Transmission Weight'])
     wb.inputs['IOR'].default_value=1.333; wb.inputs['Roughness'].default_value=0.03
     wnz=wn.new('ShaderNodeTexNoise'); wnz.noise_dimensions='4D'; wnz.inputs['Scale'].default_value=float(os.environ.get('WRIP','38')); wnz.inputs['Detail'].default_value=2
-    wbp=wn.new('ShaderNodeBump'); wbp.inputs['Strength'].default_value=float(os.environ.get('WBUMP','0.35')); wbp.inputs['Distance'].default_value=0.004
+    wbp=wn.new('ShaderNodeBump'); wbp.inputs['Strength'].default_value=float(os.environ.get('WBUMP','0.6')); wbp.inputs['Distance'].default_value=0.004
     wl.new(wnz.outputs['Fac'],wbp.inputs['Height']); wl.new(wbp.outputs['Normal'],wb.inputs['Normal'])
     for k_,v_ in (('use_raytrace_refraction',True),('use_transparency_overlap',False)):
         try: setattr(wm_,k_,v_)
@@ -113,7 +114,7 @@ if HAVEW:
     except Exception: pass
     wme.materials.append(wm_)
     # Flaechenlicht ueber der Kamera-Achse, nur fuer das Wasser: gibt den Glanz auf dem Spiegel, das Papier bleibt wie es ist
-    bpy.ops.object.light_add(type='AREA',location=tuple(float(v) for v in os.environ.get('WLPOS','0.35,0.5,3.2').split(','))); WL=bpy.context.active_object; WL.data.size=float(os.environ.get('WLSIZE','2.2')); WL.data.energy=float(os.environ.get('WLIGHT','260'))
+    bpy.ops.object.light_add(type='AREA',location=tuple(float(v) for v in os.environ.get('WLPOS','1.0,1.4,3.0').split(','))); WL=bpy.context.active_object; WL.data.size=float(os.environ.get('WLSIZE','0.8')); WL.data.energy=float(os.environ.get('WLIGHT','10'))
     try:
         col_=bpy.data.collections.new('NurWasser'); col_.objects.link(wob); WL.light_linking.receiver_collection=col_
     except Exception as e_: print('light linking fehlt',e_)

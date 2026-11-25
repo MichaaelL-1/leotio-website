@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v2.9 · 25.11.2026: WMODE=...,echt schreibt Wasserhoehe (wat_) und Faerbung (wtn_) fuer einen echten Wasserkoerper in Blender; takt.json 'pulse' = Zeiten der Wasser-Stoesse; 25.11.2026: WMODE=schwall,schaum,aufprall|flut (Wasser-Varianten); SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v3.0 · 25.11.2026: echt = Pigment stroemt mit dem Wasser (Advektion entlang der Rillen); 25.11.2026: WMODE=...,echt schreibt Wasserhoehe (wat_) und Faerbung (wtn_) fuer einen echten Wasserkoerper in Blender; takt.json 'pulse' = Zeiten der Wasser-Stoesse; 25.11.2026: WMODE=schwall,schaum,aufprall|flut (Wasser-Varianten); SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -98,6 +98,9 @@ if VAR=='wasser':   # Weg des Wassers: Laufweite entlang der Rillen ab der Ecke 
     GDH=maximum_filter(GD,25); HAL=np.clip(gaussian_filter(G.astype(np.float32),5)*2.2,0,1)          # Saum neben der Rille (Flut)
     SPM=((maximum_filter(GD,81)-GD<10)&(GD>0.3*GDM))[SPI,SPJ]                                       # Treffpunkte der Stroeme (Aufprall)
     WM=os.environ.get('WMODE','')
+    _g=gaussian_filter(GD,3); FY,FX=np.gradient(_g); _n=np.maximum(np.sqrt(FX*FX+FY*FY),1e-4); FX=(FX/_n*G).astype(np.float32); FY=(FY/_n*G).astype(np.float32)   # Fliessrichtung
+    WT=np.zeros((R,R,4),np.float32); WON=np.zeros((R,R),bool); II,JJ=np.mgrid[0:R,0:R].astype(np.float32)
+    from scipy.ndimage import map_coordinates
     MEET=gaussian_filter(((maximum_filter(GD,81)-GD<10)&(GD>0.3*GDM)&G).astype(np.float32),14); MEET/=max(MEET.max(),1e-6)   # Naehe zu den Treffpunkten
 def sparks(t0s,birth,vx,vy,vz,life,colr,white,g):
     age=t-t0s-birth; on=(age>0)&(age<life)
@@ -201,6 +204,7 @@ for f in range(NF):
             else:
                 sp=GDM/1.25; fr=a_*sp; arr=GD/sp; arrs=gsp/sp
             f1=np.clip((a_-arr)/0.05,0,1); f2=np.clip((a_-arr-0.10)/0.5,0,1); dr=np.clip((a_-arr-0.7)/0.4,0,1)
+            cov0=cov.copy()
             covg=cov*(1-f1)+(0.0 if 'echt' in WM else 0.6)*f1*(1-f2)
             cov=cov*(1-GS)+covg*GS; thick_show=1-GS*f1
             fxw=GS*f1*(1-dr)
@@ -210,7 +214,13 @@ for f in range(NF):
                 hw=0.78*(1-np.exp(-ag/0.07))+0.55*np.exp(-ag/0.07)+0.10*np.sin(6.283*(GD/60.0-a_*2.6))*np.exp(-ag/0.7)+0.45*MEET*np.exp(-ag/0.35)*np.cos(6.283*ag*2.2)
                 hw=gaussian_filter(np.where(on,np.clip(hw,0,1.02)*(1-dn)**1.5,0).astype(np.float32),1.2)
                 np.save(f'{OUT}/wat_{f:04d}.npy',hw.reshape(R//2,2,R//2,2).mean((1,3)).astype(np.float16))   # 512 x 512
-                tn=np.stack([gaussian_filter(colr[...,q],8) for q in range(3)],-1); ta=gaussian_filter(np.where(on,(0.25+0.7*np.exp(-ag/1.6))*(1-dn),0).astype(np.float32),2)
+                vv=(520*np.exp(-ag/0.22)+45)*on/FPS                                   # Stroemung: schnell hinter der Front, dann ruhiges Nachlaufen
+                src=[II-FY*vv,JJ-FX*vv]
+                WT=np.stack([map_coordinates(WT[...,q],src,order=1,mode='nearest') for q in range(4)],-1)*G[...,None]
+                new=on&~WON; WON=on.copy()
+                WT[new,:3]+=colr[new]*cov0[new,None]; WT[new,3]+=cov0[new]                # Puder loest sich an der Front und wird mitgenommen
+                WT=np.stack([gaussian_filter(WT[...,q],2.2) for q in range(4)],-1)*G[...,None]; WT*=1-0.9/FPS   # mischt sich und wird klarer
+                tn=WT[...,:3]/np.maximum(WT[...,3:4],1e-3); ta=np.clip(WT[...,3]*0.8,0,0.8)*(1-dn)*on
                 Image.fromarray((np.concatenate([np.clip(tn,0,1),ta[...,None]],-1)*255).astype(np.uint8),'RGBA').save(f'{OUT}/wtn_{f:04d}.png')
                 fxw=GS*f1*0.55*(1-np.clip((a_-TD-0.3)/0.6,0,1))
             if 'schaum' in WM and a_>0:   # helle Schaumkante an der Front, schleudert feinen Puder aus der Rille
