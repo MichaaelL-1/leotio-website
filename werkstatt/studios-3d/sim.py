@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v1.8 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v2.0 · 25.11.2026: DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; FUENF = 5 grosse Pakete; VAR=welle = Druckwelle raeumt Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -39,6 +39,9 @@ if VAR=='farben':      # Farbe fuer Farbe, je 2 Pakete
 if os.environ.get('ONE'):   # Einzelne Explosion fuer Nahaufnahme: ONE=x,y,t,farbindex
     x_,y_,t_,c_=os.environ['ONE'].split(',')
     EX=[dict(p=np.array([float(x_),float(y_)]),t=float(t_),c=int(c_),lob=7,phi=0.4)]
+if os.environ.get('FUENF'):   # 5 grosse Pakete, jede Farbe einmal: 4 Viertel, zuletzt die Mitte
+    G5=float(os.environ.get('GAP','0.9'))
+    EX=[dict(p=np.array(p_),t=1.0+n*G5,c=c_,lob=int(rng.integers(6,10)),phi=rng.uniform(0,6.3)) for n,(p_,c_) in enumerate((((-0.42,0.42),0),((0.42,-0.42),1),((-0.42,-0.42),4),((0.42,0.42),3),((0.0,0.0),2)))]
 print('Explosionen', [(round(e['t'],2),e['c']) for e in EX])
 NE=len(EX); N=NE*NP
 pos=np.zeros((N,3),np.float32); vel=np.zeros((N,3),np.float32)
@@ -48,6 +51,8 @@ CH=float(os.environ.get('CHALK','0.0'))
 pcol=(pal[col_i]*(1-CH)+CH)*rng.uniform(0.96,1.04,(N,1)).astype(np.float32)
 FINE=float(os.environ.get('FINE','0.55'))
 k=np.where(rng.random(N)<1-FINE, rng.uniform(2.5,10,N), rng.uniform(14,34,N)).astype(np.float32)          # Luftwiderstand: grob .. fein
+DUST=float(os.environ.get('DUST','0')); HT=float(os.environ.get('HT','0'))
+dm=rng.random(N)<DUST; k[dm]=rng.uniform(50,120,int(dm.sum()))   # Schwebstaub: haengt lange in der Luft
 state=np.zeros(N,np.int8)   # 0 wartet, 1 fliegt, 2 liegt
 rad=np.where(k>12, rng.uniform(0.0012,0.0024,N), rng.uniform(0.0009,0.0016,N)).astype(np.float32)
 # Ablage
@@ -99,10 +104,11 @@ for f in range(NF):
             pos[fl]=p; vel[fl]=v
             idx=np.nonzero(fl)[0]
             landed=idx[pos[idx,2]<=hgt(pos[idx,0],pos[idx,1])]
+            if ts>DUR-0.8: landed=idx   # Rest-Schwebstaub legt sich: am Ende liegt alles
             deposit(landed); state[landed]=2
     # Ausgabe: fliegende Teilchen + fallende Pakete
     fl=np.nonzero(state==1)[0]
-    P=[pos[fl]]; C=[pcol[fl]]; RR=[rad[fl]]
+    zc=np.clip(pos[fl,2:3]/0.25,0,1)*HT; P=[pos[fl]]; C=[pcol[fl]*(1-zc)+zc]; RR=[rad[fl]]
     for e,E in enumerate(EX):
         dtm=E['t']-t
         if 0<dtm<0.7:
@@ -119,6 +125,11 @@ for f in range(NF):
     cov=1-np.exp(-th/0.10)
     if VAR=='rillen':   # am Ende wird der Puder von links nach rechts aus den Rillen geblasen
         prog=np.clip((t-(DUR-2.4))/1.6,0,1); wipe=np.clip((prog*1.4-XS)/0.4,0,1)
+        cov=cov*(1-GS*wipe); thick_show=1-GS*wipe
+    elif VAR=='welle':  # Druckwelle des letzten Pakets fegt die Rillen ringfoermig frei
+        E_=EX[-1]; yy_=np.linspace(1,-1,R,dtype=np.float32)[:,None]; xx_=np.linspace(-1,1,R,dtype=np.float32)[None,:]
+        dist=np.sqrt((xx_-E_['p'][0])**2+(yy_-E_['p'][1])**2)
+        wipe=np.clip(((t-E_['t'])*float(os.environ.get('WSPEED','1.1'))-dist)/0.22,0,1)
         cov=cov*(1-GS*wipe); thick_show=1-GS*wipe
     else: thick_show=1.0
     rgba=np.concatenate([np.clip(colr,0,1),cov[...,None]],-1)

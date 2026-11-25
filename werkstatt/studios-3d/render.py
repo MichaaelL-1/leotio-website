@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v1.3 · 25.11.2026: Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
+# Leotio Studios 3D-Render v1.4 · 25.11.2026: Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -60,7 +60,7 @@ sm=gn.nodes.new('GeometryNodeSetMaterial')
 gn.links.new(gi.outputs[0],m2p.inputs['Mesh']); gn.links.new(na.outputs['Attribute'],m2p.inputs['Radius'])
 gn.links.new(m2p.outputs['Points'],sm.inputs['Geometry']); gn.links.new(sm.outputs['Geometry'],go.inputs[0])
 mod=ob.modifiers.new('pp','NODES'); mod.node_group=gn
-ob.visible_shadow=False
+ob.visible_shadow=bool(os.environ.get('PSHADOW'))
 pm=bpy.data.materials.new('PuderLuft'); pm.use_nodes=True
 pn=pm.node_tree.nodes; pb=pn['Principled BSDF']
 at=pn.new('ShaderNodeAttribute'); at.attribute_name='col'; at.attribute_type='GEOMETRY'
