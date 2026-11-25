@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v2.4 · 25.11.2026: Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v2.5 · 25.11.2026: SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -59,14 +59,15 @@ k=np.where(rng.random(N)<1-FINE, rng.uniform(2.5,10,N), rng.uniform(14,34,N)).as
 DUST=float(os.environ.get('DUST','0')); HT=float(os.environ.get('HT','0'))
 dm=rng.random(N)<DUST; k[dm]=rng.uniform(50,120,int(dm.sum()))   # Schwebstaub: haengt lange in der Luft
 state=np.zeros(N,np.int8)   # 0 wartet, 1 fliegt, 2 liegt
-rad=np.where(k>12, rng.uniform(0.0012,0.0024,N), rng.uniform(0.0009,0.0016,N)).astype(np.float32)
+SOFT=float(os.environ.get('SOFT','0')); MW=float(os.environ.get('MW','1'))
+rad=np.where(k>12, rng.uniform(0.0012,0.0024,N), rng.uniform(0.0009,0.0016,N)).astype(np.float32)*(1-0.45*SOFT)
 # Ablage
 acc=np.zeros((R,R,3),np.float32); thick=np.zeros((R,R),np.float32)
 def deposit(idx):
     if len(idx)==0: return
     x=pos[idx,0]; y=pos[idx,1]
     i=np.clip(((1-y)/2*R).astype(int),0,R-1); j=np.clip(((x+1)/2*R).astype(int),0,R-1)
-    m=(0.6+k[idx]*0.04)
+    m=(0.6+k[idx]*0.04)*MW
     np.add.at(thick,(i,j),m)
     for q in range(3): np.add.at(acc[...,q],(i,j),pcol[idx,q]*m)
 def turb(p,t):
@@ -85,7 +86,7 @@ GD=None; WN=None
 if VAR=='wasser':   # Weg des Wassers: Laufweite entlang der Rillen ab der Ecke oben links
     from collections import deque
     GD=np.full((R,R),-1,np.int32); q=deque()
-    for a,b in ((2,2),(R-3,R-3)):
+    for a,b in (((2,2),(R-3,R-3),(2,R-3),(R-3,2)) if os.environ.get('WSRC','4')=='4' else ((2,2),(R-3,R-3))):
         GD[a,b]=0; q.append((a,b))
     while q:
         a,b=q.popleft(); d=GD[a,b]+1
@@ -153,7 +154,7 @@ for f in range(NF):
             pp=np.concatenate([np.tile(E['p']*(1-zz/CAMZ),(m,1)),np.full((m,1),zz)],1).astype(np.float32)+jit   # faellt auf der Sichtachse: Einschlag genau an der Stelle
             P.append(pp); C.append(pcol[sl]); RR.append(np.full(m,0.004,np.float32))
     # Ablage-Karten
-    th=gaussian_filter(thick,1.4)+0.6*gaussian_filter(thick,14); cc=np.stack([gaussian_filter(acc[...,q],1.4)+0.6*gaussian_filter(acc[...,q],14) for q in range(3)],-1)
+    S1=1.4+2.4*SOFT; S2=14+8*SOFT; th=gaussian_filter(thick,S1)+0.6*gaussian_filter(thick,S2); cc=np.stack([gaussian_filter(acc[...,q],S1)+0.6*gaussian_filter(acc[...,q],S2) for q in range(3)],-1)
     colr=cc/np.maximum(th,1e-4)[...,None]
     cov=1-np.exp(-th/0.10)
     fxw=np.zeros((R,R),np.float32); fxg=np.zeros((R,R),np.float32); thick_show=1.0; ext=None
