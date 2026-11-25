@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v1.6 · 25.11.2026: echter Wasserkoerper (wat_/wtn_ aus sim.py), eigenes Flaechenlicht nur fuers Wasser; Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
+# Leotio Studios 3D-Render v1.7 · 25.11.2026: Schaumkarte wfo_; 25.11.2026: echter Wasserkoerper (wat_/wtn_ aus sim.py), eigenes Flaechenlicht nur fuers Wasser; Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -101,8 +101,12 @@ if HAVEW:
     tm=wn.new('ShaderNodeMix'); tm.data_type='RGBA'; tm.inputs['A'].default_value=(0.86,0.94,1.0,1)
     wgm=wn.new('ShaderNodeGamma'); wgm.inputs['Gamma'].default_value=float(os.environ.get('WSAT','1.25')); wl.new(imgT.outputs['Color'],wgm.inputs['Color'])   # kraeftigere Farbe: Pigment im Wasser
     wl.new(imgT.outputs['Alpha'],tm.inputs['Factor']); wl.new(wgm.outputs['Color'],tm.inputs['B']); wl.new(tm.outputs['Result'],wb.inputs['Base Color'])
-    tw=wn.new('ShaderNodeMath'); tw.operation='MULTIPLY_ADD'; tw.inputs[1].default_value=-float(os.environ.get('WOPAK','0.15')); tw.inputs[2].default_value=1.0
-    wl.new(imgT.outputs['Alpha'],tw.inputs[0]); wl.new(tw.outputs[0],wb.inputs['Transmission Weight'])
+    imgS=wn.new('ShaderNodeTexImage'); imgS.extension='EXTEND'; wl.new(wc.outputs[0],imgS.inputs['Vector'])        # Schaum: weiss, matt, undurchsichtig
+    fm=wn.new('ShaderNodeMix'); fm.data_type='RGBA'; fm.inputs['B'].default_value=(1,1,1,1); wl.new(imgS.outputs['Color'],fm.inputs['Factor']); wl.new(tm.outputs['Result'],fm.inputs['A']); wl.new(fm.outputs['Result'],wb.inputs['Base Color'])
+    fr_=wn.new('ShaderNodeMath'); fr_.operation='MULTIPLY_ADD'; fr_.inputs[1].default_value=0.5; fr_.inputs[2].default_value=0.03; wl.new(imgS.outputs['Color'],fr_.inputs[0]); wl.new(fr_.outputs[0],wb.inputs['Roughness'])
+    tw=wn.new('ShaderNodeMath'); tw.operation='MULTIPLY_ADD'; tw.inputs[1].default_value=-float(os.environ.get('WOPAK','0.4')); tw.inputs[2].default_value=1.0
+    wl.new(imgT.outputs['Alpha'],tw.inputs[0])
+    tf=wn.new('ShaderNodeMath'); tf.operation='SUBTRACT'; tf.use_clamp=True; wl.new(tw.outputs[0],tf.inputs[0]); wl.new(imgS.outputs['Color'],tf.inputs[1]); wl.new(tf.outputs[0],wb.inputs['Transmission Weight'])
     wb.inputs['IOR'].default_value=1.333; wb.inputs['Roughness'].default_value=0.03
     wnz=wn.new('ShaderNodeTexNoise'); wnz.noise_dimensions='4D'; wnz.inputs['Scale'].default_value=float(os.environ.get('WRIP','38')); wnz.inputs['Detail'].default_value=2
     wbp=wn.new('ShaderNodeBump'); wbp.inputs['Strength'].default_value=float(os.environ.get('WBUMP','0.6')); wbp.inputs['Distance'].default_value=0.004
@@ -114,7 +118,7 @@ if HAVEW:
     except Exception: pass
     wme.materials.append(wm_)
     # Flaechenlicht ueber der Kamera-Achse, nur fuer das Wasser: gibt den Glanz auf dem Spiegel, das Papier bleibt wie es ist
-    bpy.ops.object.light_add(type='AREA',location=tuple(float(v) for v in os.environ.get('WLPOS','1.0,1.4,3.0').split(','))); WL=bpy.context.active_object; WL.data.size=float(os.environ.get('WLSIZE','0.8')); WL.data.energy=float(os.environ.get('WLIGHT','10'))
+    bpy.ops.object.light_add(type='AREA',location=tuple(float(v) for v in os.environ.get('WLPOS','1.0,1.4,3.0').split(','))); WL=bpy.context.active_object; WL.data.size=float(os.environ.get('WLSIZE','0.8')); WL.data.energy=float(os.environ.get('WLIGHT','30'))
     try:
         col_=bpy.data.collections.new('NurWasser'); col_.objects.link(wob); WL.light_linking.receiver_collection=col_
     except Exception as e_: print('light linking fehlt',e_)
@@ -139,6 +143,8 @@ for f in frames:
             tp=f'{SIM}/wtn_{f:04d}.png'
             if imgT.image: bpy.data.images.remove(imgT.image)
             imgT.image=bpy.data.images.load(os.path.abspath(tp)); imgT.image.colorspace_settings.name='sRGB'; imgT.image.alpha_mode='CHANNEL_PACKED'
+            if imgS.image: bpy.data.images.remove(imgS.image)
+            imgS.image=bpy.data.images.load(os.path.abspath(f'{SIM}/wfo_{f:04d}.png')); imgS.image.colorspace_settings.name='Non-Color'
         co[:,2]=zz; wme.vertices.foreach_set('co',co.ravel()); wme.update()
         wnz.inputs['W'].default_value=f*0.06
     sc.render.filepath=f'{OUTD}/f_{f:04d}.png'
