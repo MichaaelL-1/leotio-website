@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v2.2 · 25.11.2026: DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v2.3 · 25.11.2026: DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -77,11 +77,11 @@ def turb(p,t):
 CAMZ0=2.0*1920/560*50/36
 # --- Rillen raeumen: Hilfsfelder
 YY=np.linspace(1,-1,R,dtype=np.float32)[:,None]; XX=np.linspace(-1,1,R,dtype=np.float32)[None,:]
-gi,gj=np.nonzero(G); NS=int(os.environ.get('NSPARK','9000'))
+gi,gj=np.nonzero(G); NS=int(os.environ.get('NSPARK','26000'))
 sk=rng.integers(0,len(gi),NS); SPI=gi[sk]; SPJ=gj[sk]
 SPX=(SPJ+rng.random(NS))/R*2-1; SPY=1-(SPI+rng.random(NS))/R*2
 SPR=rng.random(NS).astype(np.float32); SPA=rng.uniform(0,6.283,NS).astype(np.float32)
-GD=None
+GD=None; WN=None
 if VAR=='wasser':   # Weg des Wassers: Laufweite entlang der Rillen ab der Ecke oben links
     from collections import deque
     GD=np.full((R,R),-1,np.int32); q=deque()
@@ -157,13 +157,20 @@ for f in range(NF):
     if VAR=='rillen':   # am Ende wird der Puder von links nach rechts aus den Rillen geblasen
         prog=np.clip((t-(DUR-2.4))/1.6,0,1); wipe=np.clip((prog*1.4-XS)/0.4,0,1)
         cov=cov*(1-GS*wipe); thick_show=1-GS*wipe
-    elif VAR=='welle':  # 1 Druckwelle des letzten Pakets fegt die Rillen ringfoermig frei, Staub springt nach aussen
-        E_=EX[-1]; WS=float(os.environ.get('WSPEED','1.0'))
-        dist=np.sqrt((XX-E_['p'][0])**2+(YY-E_['p'][1])**2)
-        wipe=np.clip(((t-E_['t'])*WS-dist)/0.18,0,1)
+    elif VAR=='welle':  # 1 Druckwelle des letzten Pakets: unregelmaessige, koernige Front statt Kreis, feiner Staub
+        E_=EX[-1]; WS=float(os.environ.get('WSPEED','0.85'))
+        if WN is None:
+            r_=np.random.default_rng(21)
+            WN=gaussian_filter(r_.standard_normal((R,R)).astype(np.float32),60); WN/=np.abs(WN).max()      # grobe Verformung der Front
+            WF=gaussian_filter(r_.standard_normal((R,R)).astype(np.float32),1.2); WF/=WF.std()            # Korn an der Kante
+            ang=np.arctan2(YY-E_['p'][1],XX-E_['p'][0]); WA=0.10*np.sin(5*ang+1.3)+0.07*np.sin(9*ang+4.0)+0.05*np.sin(14*ang+2.2)
+        dist=np.sqrt((XX-E_['p'][0])**2+(YY-E_['p'][1])**2)*(1+WA)+0.16*WN
+        wipe=np.clip(((t-E_['t'])*WS-dist)/0.10+0.5+0.45*WF,0,1)
         cov=cov*(1-GS*wipe); thick_show=1-GS*wipe
         dx=SPX-E_['p'][0]; dy=SPY-E_['p'][1]; dd=np.maximum(np.sqrt(dx*dx+dy*dy),1e-3)
-        ext=sparks(E_['t'],dd/WS,dx/dd*0.35,dy/dd*0.35,0.5+0.4*SPR,0.6,colr,0.15,1.3)
+        dsp=dist[SPI,SPJ]
+        ext=sparks(E_['t'],dsp/WS+0.12*SPR,dx/dd*0.16,dy/dd*0.16,0.28+0.3*SPR,0.8,colr,0.25,0.5)
+        if ext is not None: ext=(ext[0],ext[1],ext[2]*0.55)
     elif VAR=='wasser' and TCLR is not None:  # 8 klares Wasser laeuft durch die Rillen und spuelt den Puder aus
         sp=GDM/1.25; fr=(t-TCLR)*sp
         f1=np.clip((fr-GD)/60,0,1); f2=np.clip((fr-GD-60)/420,0,1); dr=np.clip(((t-TCLR-1.45)*sp-GD)/500,0,1)
