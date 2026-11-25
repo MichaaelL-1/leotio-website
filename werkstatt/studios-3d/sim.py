@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v1.4 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v1.5 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -6,7 +6,7 @@ OUT=sys.argv[1]; os.makedirs(OUT,exist_ok=True)
 PAL=os.environ.get('PAL','#E3A21A,#2F8FC4,#23379A,#7B3F98,#CC2E2A').split(',')
 hx=lambda c: np.array([int(c[i:i+2],16) for i in (1,3,5)],np.float32)/255
 pal=np.array([hx(c) for c in PAL])
-FPS=24; DUR=float(os.environ.get('DUR','10')); NF=int(DUR*FPS); SUB=8; dt=1/(FPS*SUB)
+FPS=int(os.environ.get('FPS','24')); DUR=float(os.environ.get('DUR','10')); NF=int(DUR*FPS); SUB=8; dt=1/(FPS*SUB)
 NP=int(os.environ.get('NP','130000'))
 U=0.01; D=0.035; w=7.881; R=1024
 rng=np.random.default_rng(3)
@@ -29,6 +29,9 @@ for n,ci in enumerate(order):
     cx,cy=cells[ci]
     t0=1.1+n*0.33+rng.uniform(-0.08,0.08)
     EX.append(dict(p=np.array([cx+rng.uniform(-0.2,0.2),cy+rng.uniform(-0.2,0.2)]),t=t0,c=n%len(pal),lob=int(rng.integers(5,11)),phi=rng.uniform(0,6.3)))
+if os.environ.get('ONE'):   # Einzelne Explosion fuer Nahaufnahme: ONE=x,y,t,farbindex
+    x_,y_,t_,c_=os.environ['ONE'].split(',')
+    EX=[dict(p=np.array([float(x_),float(y_)]),t=float(t_),c=int(c_),lob=7,phi=0.4)]
 print('Explosionen', [(round(e['t'],2),e['c']) for e in EX])
 NE=len(EX); N=NE*NP
 pos=np.zeros((N,3),np.float32); vel=np.zeros((N,3),np.float32)

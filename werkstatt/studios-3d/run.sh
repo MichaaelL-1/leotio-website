@@ -1,5 +1,5 @@
 #!/bin/bash
-# Leotio Studios 3D-Lauf v1 · 25.11.2026
+# Leotio Studios 3D-Lauf v2 · 25.11.2026
 # Aufruf: ./run.sh preview|final   (im Ordner ~/Developer/leotio-3d)
 set -e
 cd "$(dirname "$0")"
@@ -11,6 +11,11 @@ MODE=${1:-preview}
 if [ "$MODE" = preview ]; then
   rm -rf prev; ENGINE=EEVEE EEVEE_SPP=16 GAIN=1.2 RX=960 RY=540 $B -b --python render.py -- simC prev 0-239 2>&1 | grep '^frame' | tail -1
   ffmpeg -loglevel error -y -framerate 24 -i prev/f_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 22 out/k2-3d-vorschau.mp4
+elif [ "$MODE" = explosion ]; then
+  # eine Explosion, Nahaufnahme, Zeitlupe (48 Bilder/s simuliert, mit 24 abgespielt)
+  rm -rf simX ex; ONE=0.3,0.25,0.5,4 NP=400000 FPS=48 DUR=3 .venv/bin/python sim.py simX
+  ENGINE=EEVEE EEVEE_SPP=32 GAIN=1.2 RX=1920 RY=1080 CAM=0.3,0.25,2.2,50 $B -b --python render.py -- simX ex 0-143 2>&1 | grep '^frame' | tail -1
+  ffmpeg -loglevel error -y -framerate 24 -i ex/f_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 20 out/k2-3d-explosion.mp4
 else
   rm -rf final; GPU=1 GAIN=1.2 RX=1920 RY=1080 SPP=64 $B -b --python render.py -- simC final 0-239 2>&1 | grep '^frame' | tail -1
   ffmpeg -loglevel error -y -framerate 24 -i final/f_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 18 out/k2-3d.mp4
