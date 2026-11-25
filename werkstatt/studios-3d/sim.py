@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v1.6 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v1.7 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -28,7 +28,7 @@ EX=[]
 NEX=int(os.environ.get('NEX','12')); SC=float(os.environ.get('SCALE','1.0'))
 for n,ci in enumerate(order[:NEX]):
     cx,cy=cells[ci]
-    t0=1.1+n*0.33*12/NEX+rng.uniform(-0.08,0.08)
+    t0=1.1+n*float(os.environ.get('GAP','0.33'))*12/NEX+rng.uniform(-0.08,0.08)
     EX.append(dict(p=np.array([cx+rng.uniform(-0.2,0.2),cy+rng.uniform(-0.2,0.2)]),t=t0,c=n%len(pal),lob=int(rng.integers(5,11)),phi=rng.uniform(0,6.3)))
 if os.environ.get('ONE'):   # Einzelne Explosion fuer Nahaufnahme: ONE=x,y,t,farbindex
     x_,y_,t_,c_=os.environ['ONE'].split(',')
@@ -38,8 +38,10 @@ NE=len(EX); N=NE*NP
 pos=np.zeros((N,3),np.float32); vel=np.zeros((N,3),np.float32)
 eid=np.repeat(np.arange(NE),NP); col_i=np.array([EX[e]['c'] for e in eid])
 # Farbstreuung je Teilchen (leicht heller/dunkler, Nachbarfarbe beigemischt)
-pcol=pal[col_i]*rng.uniform(0.96,1.04,(N,1)).astype(np.float32)
-k=np.where(rng.random(N)<0.45, rng.uniform(2.5,10,N), rng.uniform(14,34,N)).astype(np.float32)          # Luftwiderstand: grob .. fein
+CH=float(os.environ.get('CHALK','0.0'))
+pcol=(pal[col_i]*(1-CH)+CH)*rng.uniform(0.96,1.04,(N,1)).astype(np.float32)
+FINE=float(os.environ.get('FINE','0.55'))
+k=np.where(rng.random(N)<1-FINE, rng.uniform(2.5,10,N), rng.uniform(14,34,N)).astype(np.float32)          # Luftwiderstand: grob .. fein
 state=np.zeros(N,np.int8)   # 0 wartet, 1 fliegt, 2 liegt
 rad=np.where(k>12, rng.uniform(0.0012,0.0024,N), rng.uniform(0.0009,0.0016,N)).astype(np.float32)
 # Ablage
