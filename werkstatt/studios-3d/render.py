@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v1.4 · 25.11.2026: Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
+# Leotio Studios 3D-Render v1.5 · 25.11.2026: Szene + Puder-Teilchen (Punktwolke) + abgelegter Puder (Textur, Relief)
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -36,10 +36,20 @@ gain=N.new('ShaderNodeMix'); gain.data_type='RGBA'; gain.blend_type='MULTIPLY'; 
 gain.inputs['B'].default_value=(GAIN,GAIN,GAIN,1)
 Lk.new(imgD.outputs['Color'],gain.inputs['A'])
 Lk.new(imgD.outputs['Alpha'],mix.inputs['Factor']); Lk.new(gain.outputs['Result'],mix.inputs['B'])
-Lk.new(mix.outputs['Result'],bsdf.inputs['Base Color'])
+# Effekt-Karte: R = nass (Wasser in den Rillen), G = Leuchten
+imgF=N.new('ShaderNodeTexImage'); imgF.extension='CLIP'; Lk.new(comb.outputs[0],imgF.inputs['Vector'])
+sepF=N.new('ShaderNodeSeparateColor'); Lk.new(imgF.outputs['Color'],sepF.inputs['Color'])
+wetf=N.new('ShaderNodeMath'); wetf.operation='MULTIPLY'; wetf.inputs[1].default_value=0.42; Lk.new(sepF.outputs['Red'],wetf.inputs[0])
+wetmix=N.new('ShaderNodeMix'); wetmix.data_type='RGBA'; wetmix.inputs['B'].default_value=(0.42,0.55,0.66,1)
+Lk.new(wetf.outputs[0],wetmix.inputs['Factor']); Lk.new(mix.outputs['Result'],wetmix.inputs['A'])
+Lk.new(wetmix.outputs['Result'],bsdf.inputs['Base Color'])
+emis=N.new('ShaderNodeMath'); emis.operation='MULTIPLY'; emis.inputs[1].default_value=float(os.environ.get('GLOW','3.2')); Lk.new(sepF.outputs['Green'],emis.inputs[0])
+bsdf.inputs['Emission Color'].default_value=(1.0,0.80,0.48,1); Lk.new(emis.outputs[0],bsdf.inputs['Emission Strength'])
 # Rauheit: Puder matt
 rough=N.new('ShaderNodeMath'); rough.operation='MULTIPLY_ADD'; rough.inputs[1].default_value=0.13; rough.inputs[2].default_value=0.85
-Lk.new(imgD.outputs['Alpha'],rough.inputs[0]); Lk.new(rough.outputs[0],bsdf.inputs['Roughness'])
+Lk.new(imgD.outputs['Alpha'],rough.inputs[0])
+rwet=N.new('ShaderNodeMath'); rwet.operation='MULTIPLY_ADD'; rwet.inputs[1].default_value=-0.8; rwet.use_clamp=True
+Lk.new(sepF.outputs['Red'],rwet.inputs[0]); Lk.new(rough.outputs[0],rwet.inputs[2]); Lk.new(rwet.outputs[0],bsdf.inputs['Roughness'])
 # Relief der Puderschicht: Hoehenkarte + Korn
 old_bump=[n for n in N if n.type=='BUMP'][0]
 h_add=N.new('ShaderNodeMath'); h_add.operation='MULTIPLY_ADD'; h_add.inputs[2].default_value=0
@@ -79,7 +89,8 @@ for f in frames:
         a=me.attributes.new('rad','FLOAT','POINT'); a.data.foreach_set('value',Rr)
         c=me.attributes.new('col','FLOAT_COLOR','POINT'); c.data.foreach_set('color',np.concatenate([C,np.ones((n,1),np.float32)],1).ravel())
     me.update()
-    for img,node,cs in ((f'{SIM}/dep_{f:04d}.png',imgD,'sRGB'),(f'{SIM}/hgt_{f:04d}.png',imgH,'Non-Color')):
+    for img,node,cs in ((f'{SIM}/dep_{f:04d}.png',imgD,'sRGB'),(f'{SIM}/hgt_{f:04d}.png',imgH,'Non-Color'),(f'{SIM}/fx_{f:04d}.png',imgF,'Non-Color')):
+        if not os.path.exists(img): continue
         if node.image: bpy.data.images.remove(node.image)
         node.image=bpy.data.images.load(os.path.abspath(img)); node.image.colorspace_settings.name=cs
     sc.render.filepath=f'{OUTD}/f_{f:04d}.png'
