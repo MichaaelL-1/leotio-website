@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v2.5 · 25.11.2026: SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v2.6 · 25.11.2026: WMODE=schwall,schaum,aufprall|flut (Wasser-Varianten); SOFT = feinerer Puder (kleinere Koerner, weichere Ablage), MW = Masse je Korn, WSRC = Wasser aus 2 oder 4 Ecken; Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -95,6 +95,9 @@ if VAR=='wasser':   # Weg des Wassers: Laufweite entlang der Rillen ab der Ecke 
             if 0<=x<R and 0<=y<R and G[x,y] and GD[x,y]<0: GD[x,y]=d; q.append((x,y))
     from scipy.ndimage import maximum_filter
     GDM=float(GD.max()); GD=maximum_filter(np.where(GD<0,0,GD).astype(np.float32),9)
+    GDH=maximum_filter(GD,25); HAL=np.clip(gaussian_filter(G.astype(np.float32),5)*2.2,0,1)          # Saum neben der Rille (Flut)
+    SPM=((maximum_filter(GD,81)-GD<10)&(GD>0.3*GDM))[SPI,SPJ]                                       # Treffpunkte der Stroeme (Aufprall)
+    WM=os.environ.get('WMODE','')
 def sparks(t0s,birth,vx,vy,vz,life,colr,white,g):
     age=t-t0s-birth; on=(age>0)&(age<life)
     if not on.any(): return None
@@ -175,6 +178,39 @@ for f in range(NF):
         dsp=dist[SPI,SPJ]
         ext=sparks(E_['t'],dsp/WS+0.12*SPR,dx/dd*0.16,dy/dd*0.16,0.28+0.3*SPR,0.8,colr,0.25,0.5)
         if ext is not None: ext=(ext[0],ext[1],ext[2]*0.55)
+    elif VAR=='wasser' and TCLR is not None and WM:   # Wasser-Varianten: schwall (im Takt), schaum (helle Front), aufprall (Spritzer am Treffpunkt), flut (fuellen und Sog)
+        a_=t-TCLR; BT=60.0/TK.get('bpm',90)/SL; gsp=GD[SPI,SPJ]
+        if 'flut' in WM:
+            sp=GDM/0.7; arr=GD/sp; arrH=GDH/sp; TS=3*BT
+            f1=np.clip((a_-arr)/0.05,0,1); r=np.clip((a_-TS)/0.25,0,1)
+            keep=np.clip((GDM*(1-r*r)-GD)/40+0.5,0,1)*(1-np.clip((a_-TS-0.25)/0.1,0,1))
+            b=np.clip((a_-0.7)/0.4,0,1); dry=np.clip((a_-TS-0.3)/0.9,0,1)
+            covg=cov*(1-f1)+0.6*f1*keep
+            cov=cov*(1-GS)+covg*GS; thick_show=1-GS*f1
+            fxw=np.maximum(GS*f1*keep,np.clip(HAL-GS,0,1)*b*np.clip((a_-arrH)/0.05,0,1)*(1-dry))
+            if a_>TS:   # Sog: feine Tropfen, wo sich das Wasser zurueckzieht
+                e_=sparks(TCLR+TS,0.25*np.sqrt(np.clip(1-gsp/GDM,0,1)),0.10*np.cos(SPA),0.10*np.sin(SPA),0.25+0.35*SPR,0.5,colr,0.8,0.9)
+                if e_ is not None: P.append(e_[0]); C.append(e_[1]); RR.append(e_[2]*0.7)
+        else:
+            if 'schwall' in WM:   # 3 Stoesse, je einer pro Schlag
+                FR=GDM+80; seg=FR/3; PD=0.16
+                fr=sum(seg*np.clip((a_-k_*BT)/PD,0,1) for k_ in range(3))
+                kk=np.clip(np.floor(GD/seg),0,2); arr=kk*BT+PD*(GD-kk*seg)/seg
+                kq=np.clip(np.floor(gsp/seg),0,2); arrs=kq*BT+PD*(gsp-kq*seg)/seg
+            else:
+                sp=GDM/1.25; fr=a_*sp; arr=GD/sp; arrs=gsp/sp
+            f1=np.clip((a_-arr)/0.05,0,1); f2=np.clip((a_-arr-0.10)/0.5,0,1); dr=np.clip((a_-arr-1.2)/0.5,0,1)
+            covg=cov*(1-f1)+0.6*f1*(1-f2)
+            cov=cov*(1-GS)+covg*GS; thick_show=1-GS*f1
+            fxw=GS*f1*(1-dr)
+            if 'schaum' in WM and a_>0:   # helle Schaumkante an der Front, schleudert feinen Puder aus der Rille
+                fb=np.clip(1-np.abs(a_-arr-0.03)/0.05,0,1)*GS*(GD>0)
+                colr=colr*(1-fb[...,None])+fb[...,None]; cov=np.maximum(cov,0.92*fb)
+                e_=sparks(TCLR,arrs+0.02*SPR,0.14*np.cos(SPA),0.14*np.sin(SPA),0.25+0.45*SPR,0.55,colr,0.45,0.9)
+                if e_ is not None: P.append(e_[0]); C.append(e_[1]); RR.append(e_[2]*0.6)
+            if 'aufprall' in WM and a_>0:  # wo sich die Stroeme treffen, spritzt es hoch
+                e_=sparks(TCLR,np.where(SPM,arrs,1e9),0.32*SPR*np.cos(SPA),0.32*SPR*np.sin(SPA),0.7+0.9*SPR,0.75,colr,0.85,1.3)
+                if e_ is not None: P.append(e_[0]); C.append(e_[1]); RR.append(e_[2])
     elif VAR=='wasser' and TCLR is not None:  # 8 klares Wasser laeuft durch die Rillen und spuelt den Puder aus
         sp=GDM/1.25; fr=(t-TCLR)*sp
         f1=np.clip((fr-GD)/60,0,1); f2=np.clip((fr-GD-60)/420,0,1); dr=np.clip(((t-TCLR-1.45)*sp-GD)/500,0,1)
