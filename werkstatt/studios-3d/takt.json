@@ -1,9 +1,9 @@
-{"_": "Leotio Studios Takt v1 · 25.11.2026: Zeiten in Video-Sekunden (12 s), steuert Ton und Animation",
+{"_": "Leotio Studios Takt v2 · 25.11.2026: Zeiten in Video-Sekunden (12 s), steuert Ton und Animation",
  "slow": 1.5, "dauer": 12.0, "bpm": 90,
  "hits": [
   {"t": 1.333, "p": [-0.50, 0.42], "c": 0, "sc": 1.9},
   {"t": 2.667, "p": [0.47, -0.36], "c": 1, "sc": 1.7},
   {"t": 4.000, "p": [-0.28, -0.56], "c": 4, "sc": 1.5},
   {"t": 4.667, "p": [0.38, 0.56], "c": 3, "sc": 1.6},
-  {"t": 6.667, "p": [0.08, -0.03], "c": 2, "sc": 2.0}],
+  {"t": 6.667, "p": [-0.30, -0.06], "c": 2, "sc": 1.7, "fl": 0.15, "el": [1.7, 18]}],
  "clear": 7.0, "schluss": 9.333}

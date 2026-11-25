@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v2.3 · 25.11.2026: DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v2.4 · 25.11.2026: Takt-Treffer mit fl (flaechig: Startbreite) und el [Streckung, Winkel Grad]; DUST = Schwebstaub, HT = Aufhellung mit der Hoehe; TAKT=takt.json steuert Zeiten/Orte; VAR=welle|wasser|licht raeumt die Rillen; 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -45,7 +45,7 @@ if os.environ.get('FUENF'):   # 5 grosse Pakete, jede Farbe einmal: 4 Viertel, z
 TCLR=None
 if os.environ.get('TAKT'):    # Takt-Datei: Zeiten in Video-Sekunden, hier in Simulationszeit umgerechnet
     import json; TK=json.load(open(os.environ['TAKT'])); SL=TK.get('slow',1.5)
-    EX=[dict(p=np.array(h['p'],float),t=h['t']/SL,c=h['c'],sc=h.get('sc',1.0),lob=int(rng.integers(6,10)),phi=rng.uniform(0,6.3)) for h in TK['hits']]
+    EX=[dict(p=np.array(h['p'],float),t=h['t']/SL,c=h['c'],sc=h.get('sc',1.0),fl=h.get('fl',0.02),el=h.get('el',[1.0,0.0]),lob=int(rng.integers(6,10)),phi=rng.uniform(0,6.3)) for h in TK['hits']]
     TCLR=TK['clear']/SL
 print('Explosionen', [(round(e['t'],2),e['c']) for e in EX])
 NE=len(EX); N=NE*NP
@@ -117,9 +117,12 @@ for f in range(NF):
                 reach=rng.gamma(2.5,0.09,n)*spike*SC*E.get('sc',1.0)                          # Reichweite in m
                 sp=reach*k[sl]
                 up=rng.gamma(2.0,0.06,n)*k[sl]
-                vel[sl,0]=np.cos(th)*sp; vel[sl,1]=np.sin(th)*sp; vel[sl,2]=up
+                FLW=E.get('fl',0.02); ELS,ELA=E.get('el',[1.0,0.0]); ca,sa=np.cos(np.radians(ELA)),np.sin(np.radians(ELA))
+                ux=np.cos(th)*sp*ELS; uy=np.sin(th)*sp/np.sqrt(ELS)                                   # gestreckte Wolke, gedreht um ELA
+                vel[sl,0]=ux*ca-uy*sa; vel[sl,1]=ux*sa+uy*ca; vel[sl,2]=up
                 vel[sl,2]+= -FALL*0.15
-                pos[sl,0]=E['p'][0]+rng.normal(0,0.02,n); pos[sl,1]=E['p'][1]+rng.normal(0,0.02,n); pos[sl,2]=0.01
+                qx=rng.normal(0,FLW*ELS,n); qy=rng.normal(0,FLW/np.sqrt(ELS),n)                       # flaechiger Start statt Punkt
+                pos[sl,0]=np.clip(E['p'][0]+qx*ca-qy*sa,-0.97,0.97); pos[sl,1]=np.clip(E['p'][1]+qx*sa+qy*ca,-0.97,0.97); pos[sl,2]=0.01
                 state[sl]=1
         fl=state==1
         if fl.any():
