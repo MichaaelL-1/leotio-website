@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v1.5 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
+# Leotio Studios Puder-Simulation v1.6 · 25.11.2026: 12 Explosionen aus der Hoehe, Luftwiderstand, Absetzen in Rillen, Ablage-Karten
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -25,9 +25,10 @@ def hgt(x,y):
 cells=[(cx,cy) for cy in (-0.6,0.0,0.6) for cx in (-0.66,-0.22,0.22,0.66)]
 order=rng.permutation(len(cells))
 EX=[]
-for n,ci in enumerate(order):
+NEX=int(os.environ.get('NEX','12')); SC=float(os.environ.get('SCALE','1.0'))
+for n,ci in enumerate(order[:NEX]):
     cx,cy=cells[ci]
-    t0=1.1+n*0.33+rng.uniform(-0.08,0.08)
+    t0=1.1+n*0.33*12/NEX+rng.uniform(-0.08,0.08)
     EX.append(dict(p=np.array([cx+rng.uniform(-0.2,0.2),cy+rng.uniform(-0.2,0.2)]),t=t0,c=n%len(pal),lob=int(rng.integers(5,11)),phi=rng.uniform(0,6.3)))
 if os.environ.get('ONE'):   # Einzelne Explosion fuer Nahaufnahme: ONE=x,y,t,farbindex
     x_,y_,t_,c_=os.environ['ONE'].split(',')
@@ -68,7 +69,7 @@ for f in range(NF):
                 n=NP
                 th=rng.uniform(0,2*np.pi,n);
                 spike=1+2.5*np.abs(np.sin(E['lob']*th/2+E['phi']))**10      # Strahlen wie bei echtem Puder
-                reach=rng.gamma(2.5,0.09,n)*spike                          # Reichweite in m
+                reach=rng.gamma(2.5,0.09,n)*spike*SC                          # Reichweite in m
                 sp=reach*k[sl]
                 up=rng.gamma(2.0,0.06,n)*k[sl]
                 vel[sl,0]=np.cos(th)*sp; vel[sl,1]=np.sin(th)*sp; vel[sl,2]=up
@@ -97,8 +98,8 @@ for f in range(NF):
     for e,E in enumerate(EX):
         dtm=E['t']-t
         if 0<dtm<0.7:
-            m=2500; sl=np.arange(e*NP,e*NP+m)
-            jit=rng.normal(0,1,(m,3)).astype(np.float32)*np.array([0.03,0.03,0.03+dtm*0.08],np.float32)
+            m=int(2500*SC*SC); sl=np.arange(e*NP,e*NP+m)
+            jit=rng.normal(0,1,(m,3)).astype(np.float32)*np.array([0.03*SC,0.03*SC,0.03*SC+dtm*0.08],np.float32)
             zz=FALL*dtm; CAMZ=2.0*1920/560*50/36
             pp=np.concatenate([np.tile(E['p']*(1-zz/CAMZ),(m,1)),np.full((m,1),zz)],1).astype(np.float32)+jit   # faellt auf der Sichtachse: Einschlag genau an der Stelle
             P.append(pp); C.append(pcol[sl]); RR.append(np.full(m,0.004,np.float32))
