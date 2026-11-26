@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v3.6 · 26.11.2026: SHOCK Druckwelle schiebt liegenden Puder ringfoermig weg, DUSTEND Schwebstaub setzt sich allmaehlich; v3.5 UPF Spritzhoehe, GRAVF Schwerkraft-Faktor (Wolke setzt sich schneller); v3.4 NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
+# Leotio Studios Puder-Simulation v3.7 · 26.11.2026: STARJIT unregelmaessige Strahlen (ungleich lang, kein exakter Stern), GRVSINK Staub ueber Rillen sinkt schneller (Rillen frueher sauber), WALL Abstand der Wolke zum Quadratrand, je Schlag 'dn' (dichter: mehr Masse, groessere Koerner); v3.6 SHOCK Druckwelle schiebt liegenden Puder ringfoermig weg, DUSTEND Schwebstaub setzt sich allmaehlich; v3.5 UPF Spritzhoehe, GRAVF Schwerkraft-Faktor (Wolke setzt sich schneller); v3.4 NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -45,7 +45,7 @@ if os.environ.get('FUENF'):   # 5 grosse Pakete, jede Farbe einmal: 4 Viertel, z
 TCLR=None
 if os.environ.get('TAKT'):    # Takt-Datei: Zeiten in Video-Sekunden, hier in Simulationszeit umgerechnet
     import json; TK=json.load(open(os.environ['TAKT'])); SL=TK.get('slow',1.5)
-    EX=[dict(p=np.array(h['p'],float),t=h['t']/SL,c=h['c'],sc=h.get('sc',1.0),fl=h.get('fl',0.02),el=h.get('el',[1.0,0.0]),lob=int(rng.integers(6,10)),phi=rng.uniform(0,6.3)) for h in TK['hits']]
+    EX=[dict(p=np.array(h['p'],float),t=h['t']/SL,c=h['c'],sc=h.get('sc',1.0),dn=h.get('dn',1.0),fl=h.get('fl',0.02),el=h.get('el',[1.0,0.0]),lob=int(rng.integers(6,10)),phi=rng.uniform(0,6.3)) for h in TK['hits']]
     TCLR=TK['clear']/SL
 print('Explosionen', [(round(e['t'],2),e['c']) for e in EX])
 NE=len(EX); N=NE*NP
@@ -61,13 +61,14 @@ dm=rng.random(N)<DUST; k[dm]=rng.uniform(50,120,int(dm.sum()))   # Schwebstaub: 
 state=np.zeros(N,np.int8)   # 0 wartet, 1 fliegt, 2 liegt
 SOFT=float(os.environ.get('SOFT','0')); MW=float(os.environ.get('MW','1'))
 rad=np.where(k>12, rng.uniform(0.0012,0.0024,N), rng.uniform(0.0009,0.0016,N)).astype(np.float32)*(1-0.45*SOFT)
+DNP=np.array([EX[e].get('dn',1.0) for e in eid],np.float32); rad*=np.sqrt(DNP)   # v3.7: dichtere Schlaege
 # Ablage
 acc=np.zeros((R,R,3),np.float32); thick=np.zeros((R,R),np.float32)
 def deposit(idx):
     if len(idx)==0: return
     x=pos[idx,0]; y=pos[idx,1]
     i=np.clip(((1-y)/2*R).astype(int),0,R-1); j=np.clip(((x+1)/2*R).astype(int),0,R-1)
-    m=(0.6+k[idx]*0.04)*MW*(1-G[i,j]*NOFUGE)   # NOFUGE: Koerner ueber einer Fuge fallen hindurch
+    m=(0.6+k[idx]*0.04)*MW*DNP[idx]*(1-G[i,j]*NOFUGE)   # NOFUGE: Koerner ueber einer Fuge fallen hindurch
     np.add.at(thick,(i,j),m)
     for q in range(3): np.add.at(acc[...,q],(i,j),pcol[idx,q]*m)
 def turb(p,t):
@@ -124,6 +125,11 @@ for f in range(NF):
                 n=NP
                 th=rng.uniform(0,2*np.pi,n);
                 spike=1+2.5*np.abs(np.sin(E['lob']*th/2+E['phi']))**10      # Strahlen wie bei echtem Puder
+                SJ=float(os.environ.get('STARJIT','0'))
+                if SJ>0:   # v3.7: jeder Strahl eigene Laenge, Breite und leicht verschobener Winkel
+                    nl=2*E['lob']; rl=rng.uniform(1-SJ,1+0.4*SJ,nl); rw=rng.uniform(6,14,nl); ro=rng.uniform(-0.35,0.35,nl)*SJ
+                    li=(np.floor((E['lob']*th/(2*np.pi)+E['phi']/np.pi)*2)%nl).astype(int)
+                    spike=1+2.5*rl[li]*np.abs(np.sin(E['lob']*th/2+E['phi']+ro[li]))**rw[li]*rng.uniform(0.6,1.0,n)
                 reach=rng.gamma(2.5,0.09,n)*spike*SC*E.get('sc',1.0)                          # Reichweite in m
                 sp=reach*k[sl]
                 up=rng.gamma(2.0,0.06,n)*k[sl]*float(os.environ.get('UPF','1'))
@@ -140,9 +146,13 @@ for f in range(NF):
             v=v*np.exp(-kk*dt)
             v[:,2]-=9.81*float(os.environ.get('GRAVF','1'))*dt
             v+= turb(p,ts)*0.6*dt*kk*0.3
+            GSK=float(os.environ.get('GRVSINK','0'))
+            if GSK>0:   # v3.7: ueber einer Rille faellt der Staub schneller durch, die Rille ist frueher wieder sauber
+                gi_=np.clip(((1-p[:,1])/2*R).astype(int),0,R-1); gj_=np.clip(((p[:,0]+1)/2*R).astype(int),0,R-1)
+                v[:,2]-=GSK*9.81*dt*GS[gi_,gj_]
             p=p+v*dt
             # unsichtbare Wand am Quadratrand: aussen bleibt sauber
-            lim=0.99*(1-np.maximum(p[:,2],0)/CAMZ0)     # Rand in Bildprojektion: auch hohe Teilchen bleiben im Quadrat
+            lim=float(os.environ.get('WALL','0.99'))*(1-np.maximum(p[:,2],0)/CAMZ0)     # Rand in Bildprojektion: auch hohe Teilchen bleiben im Quadrat
             for a in (0,1):
                 o=np.abs(p[:,a])>lim
                 p[o,a]=np.sign(p[o,a])*lim[o]; v[o,a]*=-0.3
