@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v1.8 · 25.11.2026: fx-Kanal B = nasse Flaeche (Glanz, Aquarell); v1.7 Schaumkarte wfo_, echter Wasserkoerper
+# Leotio Studios 3D-Render v1.9 · 26.11.2026: VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -82,6 +82,49 @@ pb.inputs['Alpha'].default_value=float(os.environ.get('PALPHA','0.45'))
 pb.inputs['Specular IOR Level'].default_value=0.0
 pb.inputs['Subsurface Weight'].default_value=0.3 if 'Subsurface Weight' in pb.inputs else 0
 sm.inputs['Material'].default_value=pm
+# --- Puderwolken als Volumen: je Palettenfarbe ein Koerper aus den fliegenden Koernern
+VOL=bool(os.environ.get('VOL'))
+VOBJ=[]
+if VOL:
+    ob.hide_render=True
+    PALV=[tuple(int(h[i:i+2],16)/255 for i in (0,2,4)) for h in ('E3A21A','2F8FC4','23379A','7B3F98','CC2E2A')]
+    VR=float(os.environ.get('VRAD','4.0')); VVOX=float(os.environ.get('VVOX','0.006')); VDEN=float(os.environ.get('VDEN','60')); VPAST=float(os.environ.get('VPAST','0.25'))
+    for ci,pc in enumerate(PALV):
+        vme=bpy.data.meshes.new(f'Wolke{ci}'); vo=bpy.data.objects.new(f'Wolke{ci}',vme); bpy.context.collection.objects.link(vo)
+        g=bpy.data.node_groups.new(f'WolkeGN{ci}','GeometryNodeTree')
+        g.interface.new_socket('Geometry',in_out='INPUT',socket_type='NodeSocketGeometry'); g.interface.new_socket('Geometry',in_out='OUTPUT',socket_type='NodeSocketGeometry')
+        gi_=g.nodes.new('NodeGroupInput'); go_=g.nodes.new('NodeGroupOutput')
+        mp=g.nodes.new('GeometryNodeMeshToPoints'); ra=g.nodes.new('GeometryNodeInputNamedAttribute'); ra.data_type='FLOAT'; ra.inputs['Name'].default_value='rad'
+        mul=g.nodes.new('ShaderNodeMath'); mul.operation='MULTIPLY'; mul.inputs[1].default_value=VR
+        g.links.new(ra.outputs['Attribute'],mul.inputs[0]); g.links.new(gi_.outputs[0],mp.inputs['Mesh']); g.links.new(mul.outputs[0],mp.inputs['Radius'])
+        pv=g.nodes.new('GeometryNodePointsToVolume'); pv.inputs['Density'].default_value=1.0
+        try: pv.resolution_mode='VOXEL_SIZE'
+        except Exception: pass
+        if 'Resolution Mode' in pv.inputs:
+            for v_ in ('Size','Voxel Size','VOXEL_SIZE'):
+                try: pv.inputs['Resolution Mode'].default_value=v_; break
+                except Exception: pass
+        for nm in ('Voxel Size',):
+            if nm in pv.inputs: pv.inputs[nm].default_value=VVOX
+        g.links.new(mp.outputs['Points'],pv.inputs['Points']); g.links.new(mp.outputs['Points'],pv.inputs['Points'])
+        if 'Radius' in pv.inputs:
+            ra2=g.nodes.new('GeometryNodeInputRadius'); g.links.new(ra2.outputs[0],pv.inputs['Radius'])
+        sm_=g.nodes.new('GeometryNodeSetMaterial'); g.links.new(pv.outputs[0],sm_.inputs['Geometry']); g.links.new(sm_.outputs['Geometry'],go_.inputs[0])
+        vm=bpy.data.materials.new(f'WolkeM{ci}'); vm.use_nodes=True; vn=vm.node_tree.nodes
+        for n_ in list(vn):
+            if n_.type=='BSDF_PRINCIPLED': vn.remove(n_)
+        pvn=vn.new('ShaderNodeVolumePrincipled'); col=tuple((c**float(os.environ.get('VSAT','1')))*(1-VPAST)+VPAST for c in pc)
+        pvn.inputs['Color'].default_value=(*col,1); pvn.inputs['Density'].default_value=VDEN; pvn.inputs['Anisotropy'].default_value=float(os.environ.get('VANI','0.35'))
+        if 'Absorption Color' in pvn.inputs: pvn.inputs['Absorption Color'].default_value=(1,1,1,1)   # keine Eintruebung: Pulver streut, schluckt kaum
+        if 'Emission Strength' in pvn.inputs and float(os.environ.get('VGLOW','0'))>0:
+            pvn.inputs['Emission Color'].default_value=(*col,1); pvn.inputs['Emission Strength'].default_value=float(os.environ['VGLOW'])
+        out_=[n_ for n_ in vn if n_.type=='OUTPUT_MATERIAL'][0]; vm.node_tree.links.new(pvn.outputs[0],out_.inputs['Volume'])
+        sm_.inputs['Material'].default_value=vm
+        md=vo.modifiers.new('w','NODES'); md.node_group=g
+        vo.visible_shadow=bool(int(os.environ.get('VSHADOW','1')))
+        VOBJ.append((vo,vme,np.array(pc,np.float32)))
+    try: sc.cycles.volume_bounces=int(os.environ.get('VBOUNCE','1')); sc.cycles.volume_step_rate=float(os.environ.get('VSTEP','1.0'))
+    except Exception: pass
 # --- Wasserkoerper: Hoehenfeld ueber dem Quadrat, liegt trocken unter dem Rillenboden
 WG=512; HAVEW=any(os.path.exists(f'{SIM}/wat_{f:04d}.npy') for f in frames)
 if HAVEW:
@@ -133,6 +176,14 @@ for f in frames:
         a=me.attributes.new('rad','FLOAT','POINT'); a.data.foreach_set('value',Rr)
         c=me.attributes.new('col','FLOAT_COLOR','POINT'); c.data.foreach_set('color',np.concatenate([C,np.ones((n,1),np.float32)],1).ravel())
     me.update()
+    if VOL:
+        PV=np.array([v[2] for v in VOBJ]); idx_=np.argmin(((C[:,None,:3]-PV[None])**2).sum(-1),1) if n>0 else np.zeros(0,int)
+        for ci,(vo,vme,pc) in enumerate(VOBJ):
+            vme.clear_geometry(); sel=np.nonzero(idx_==ci)[0]
+            if len(sel)>0:
+                vme.vertices.add(len(sel)); vme.vertices.foreach_set('co',P[sel].ravel())
+                a_=vme.attributes.new('rad','FLOAT','POINT'); a_.data.foreach_set('value',Rr[sel])
+            vme.update()
     for img,node,cs in ((f'{SIM}/dep_{f:04d}.png',imgD,'sRGB'),(f'{SIM}/hgt_{f:04d}.png',imgH,'Non-Color'),(f'{SIM}/fx_{f:04d}.png',imgF,'Non-Color')):
         if not os.path.exists(img): continue
         if node.image: bpy.data.images.remove(node.image)
