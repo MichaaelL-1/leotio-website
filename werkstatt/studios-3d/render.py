@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v2.4 · 26.11.2026: SWEEP mit Abdunkeln der Hauptsonne (SWEEPDIM), Staerke passend zum flachen Winkel; v2.3 SWEEP jetzt flache Sonne, die einmal um das Relief wandert (kein Lichtfleck, Rand bleibt sauber); v2.2 SUBF/SLOMO Zeitlupe nach dem 1. Einschlag (Takt bleibt), SWEEP Streiflicht zum Schluss, DOF Tiefenschaerfe; v2.1 PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
+# Leotio Studios 3D-Render v2.6 · 26.11.2026: LASTMODE glow|shadow|backlit (Schatten springt; Quadrat von hinten durchleuchtet); v2.5 LAST Schlusslicht (vorher dunkler, auf dem letzten Schlag Licht an, Rillen gluehen kurz); v2.4 SWEEP mit Abdunkeln der Hauptsonne (SWEEPDIM), Staerke passend zum flachen Winkel; v2.3 SWEEP jetzt flache Sonne, die einmal um das Relief wandert (kein Lichtfleck, Rand bleibt sauber); v2.2 SUBF/SLOMO Zeitlupe nach dem 1. Einschlag (Takt bleibt), SWEEP Streiflicht zum Schluss, DOF Tiefenschaerfe; v2.1 PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -55,7 +55,29 @@ wetmix=N.new('ShaderNodeMix'); wetmix.data_type='RGBA'; wetmix.inputs['B'].defau
 Lk.new(wetf.outputs[0],wetmix.inputs['Factor']); Lk.new(mix.outputs['Result'],wetmix.inputs['A'])
 Lk.new(wetmix.outputs['Result'],bsdf.inputs['Base Color'])
 emis=N.new('ShaderNodeMath'); emis.operation='MULTIPLY'; emis.inputs[1].default_value=float(os.environ.get('GLOW','3.2')); Lk.new(sepF.outputs['Green'],emis.inputs[0])
-bsdf.inputs['Emission Color'].default_value=(1.0,0.80,0.48,1); Lk.new(emis.outputs[0],bsdf.inputs['Emission Strength'])
+bsdf.inputs['Emission Color'].default_value=(1.0,0.80,0.48,1)
+if os.environ.get('LAST'):   # Rillen-Gluehen: alles unter halber Rillentiefe (Rillenboden) leuchtet warmweiss
+    bsdf.inputs['Emission Color'].default_value=(1.0,0.94,0.84,1)
+    gz=N.new('ShaderNodeMath'); gz.operation='LESS_THAN'; gz.inputs[1].default_value=-scene.D*0.6; Lk.new(sep.outputs['Z'],gz.inputs[0])
+    gq=N.new('ShaderNodeMath'); gq.operation='LESS_THAN'; gq.inputs[1].default_value=0.995
+    ab=N.new('ShaderNodeMath'); ab.operation='MAXIMUM'
+    axx=N.new('ShaderNodeMath'); axx.operation='ABSOLUTE'; Lk.new(sep.outputs['X'],axx.inputs[0])
+    ayy=N.new('ShaderNodeMath'); ayy.operation='ABSOLUTE'; Lk.new(sep.outputs['Y'],ayy.inputs[0])
+    Lk.new(axx.outputs[0],ab.inputs[0]); Lk.new(ayy.outputs[0],ab.inputs[1]); Lk.new(ab.outputs[0],gq.inputs[0])
+    gm2=N.new('ShaderNodeMath'); gm2.operation='MULTIPLY'; Lk.new(gz.outputs[0],gm2.inputs[0]); Lk.new(gq.outputs[0],gm2.inputs[1])
+    GLOWV=N.new('ShaderNodeValue'); GLOWV.outputs[0].default_value=0.0
+    gm3=N.new('ShaderNodeMath'); gm3.operation='MULTIPLY'; Lk.new(gm2.outputs[0],gm3.inputs[0]); Lk.new(GLOWV.outputs[0],gm3.inputs[1])
+    if os.environ.get('LASTMODE')=='backlit':   # Papier von hinten durchleuchtet: ganzes Quadrat leuchtet in seiner Farbe, Rillen (duenner) staerker
+        tint=N.new('ShaderNodeMix'); tint.data_type='RGBA'; tint.blend_type='MULTIPLY'; tint.inputs['Factor'].default_value=1.0
+        tint.inputs['B'].default_value=(1.0,0.90,0.74,1); Lk.new(wetmix.outputs['Result'],tint.inputs['A']); Lk.new(tint.outputs['Result'],bsdf.inputs['Emission Color'])
+        gth=N.new('ShaderNodeMath'); gth.operation='MULTIPLY_ADD'; gth.inputs[1].default_value=float(os.environ.get('BLGROOVE','1.8')); gth.inputs[2].default_value=1.0
+        Lk.new(gz.outputs[0],gth.inputs[0])
+        gbl=N.new('ShaderNodeMath'); gbl.operation='MULTIPLY'; Lk.new(gth.outputs[0],gbl.inputs[0]); Lk.new(gq.outputs[0],gbl.inputs[1])
+        gm3=N.new('ShaderNodeMath'); gm3.operation='MULTIPLY'; Lk.new(gbl.outputs[0],gm3.inputs[0]); Lk.new(GLOWV.outputs[0],gm3.inputs[1])
+    gsum=N.new('ShaderNodeMath'); gsum.operation='ADD'; Lk.new(emis.outputs[0],gsum.inputs[0]); Lk.new(gm3.outputs[0],gsum.inputs[1])
+    Lk.new(gsum.outputs[0],bsdf.inputs['Emission Strength'])
+else:
+    Lk.new(emis.outputs[0],bsdf.inputs['Emission Strength'])
 # Rauheit: Puder matt
 rough=N.new('ShaderNodeMath'); rough.operation='MULTIPLY_ADD'; rough.inputs[1].default_value=0.13; rough.inputs[2].default_value=0.85
 Lk.new(imgD.outputs['Alpha'],rough.inputs[0])
@@ -207,6 +229,36 @@ if SWP:
         return d.to_track_quat('Z','Y').to_euler()
 # --- Zeitlupe: Videobild v -> Simulationsbild (SUBF Sim-Bilder je Videobild); SLOMO=a,b,c,s: a..b Tempo s, b..c holt auf, ab c wieder im Takt
 SUBF=int(os.environ.get('SUBF','1'))
+LASTF=os.environ.get('LAST')
+if LASTF:   # Schlusslicht: ab LASTA dunkler bis LASTDIM, auf Bild LAST Licht an, Rillen gluehen und klingen ab
+    LB=float(LASTF); LA=float(os.environ.get('LASTA',str(LB-26))); LDIM=float(os.environ.get('LASTDIM','0.35')); LG=float(os.environ.get('LASTGLOW','6')); LT=float(os.environ.get('LASTTAU','10'))
+    ALLL=[(o,o.data.energy) for o in bpy.data.objects if o.type=='LIGHT']
+    BGN=sc.world.node_tree.nodes['Background']; BG0=BGN.inputs['Strength'].default_value
+    LMODE=os.environ.get('LASTMODE','glow')
+    import math
+    from mathutils import Vector
+    SUNS=[(o,o.rotation_euler.copy(),o.data.angle) for o,e in ALLL if o.data.type=='SUN']
+    def sundir(el,az=135):
+        el=math.radians(el); az=math.radians(az); d=Vector((math.cos(az)*math.cos(el),math.sin(az)*math.cos(el),math.sin(el)))
+        return d.to_track_quat('Z','Y').to_euler()
+    def lastlight(v):
+        x=float(np.clip((v-LA)/(LB-LA),0,1)); sx=x*x*(3-2*x)
+        if LMODE=='shadow':   # weich und flach bis zum Schlag, auf dem Schlag steil und hart
+            dim=1.0; gl=0.0
+            for o,r0,a0 in SUNS:
+                if v<LA: o.rotation_euler=r0; o.data.angle=a0
+                elif v<LB: o.rotation_euler=sundir(24-12*sx); o.data.angle=a0+math.radians(30)*sx
+                else: o.rotation_euler=sundir(float(os.environ.get('LASTEL','58'))); o.data.angle=math.radians(0.3)
+        elif LMODE=='backlit':   # Licht von hinten schwillt zum Schlag an, vorne wird es etwas dunkler, danach klingt alles ab
+            if v<LA: dim=1.0; gl=0.0
+            elif v<LB: dim=1-(1-LDIM)*sx; gl=LG*sx*sx
+            else: d_=np.exp(-(v-LB)/LT); dim=1-(1-LDIM)*d_; gl=LG*d_
+        else:
+            if v<LA: dim=1.0; gl=0.0
+            elif v<LB: dim=1-(1-LDIM)*sx; gl=0.0
+            else: dim=1.0; gl=LG*np.exp(-(v-LB)/LT)
+        for o,e in ALLL: o.data.energy=e*dim
+        BGN.inputs['Strength'].default_value=BG0*dim; GLOWV.outputs[0].default_value=gl
 def simf(v):
     g=float(v)
     if os.environ.get('SLOMO'):
@@ -217,6 +269,7 @@ def simf(v):
     return int(round(g*SUBF))
 for vf in frames:
     f=simf(vf)
+    if LASTF: lastlight(vf)
     if SWP:
         pr=(vf-sw0)/max(sw1-sw0,1)
         if 0<=pr<=1:
