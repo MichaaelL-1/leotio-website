@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v2.6 · 26.11.2026: LASTMODE glow|shadow|backlit (Schatten springt; Quadrat von hinten durchleuchtet); v2.5 LAST Schlusslicht (vorher dunkler, auf dem letzten Schlag Licht an, Rillen gluehen kurz); v2.4 SWEEP mit Abdunkeln der Hauptsonne (SWEEPDIM), Staerke passend zum flachen Winkel; v2.3 SWEEP jetzt flache Sonne, die einmal um das Relief wandert (kein Lichtfleck, Rand bleibt sauber); v2.2 SUBF/SLOMO Zeitlupe nach dem 1. Einschlag (Takt bleibt), SWEEP Streiflicht zum Schluss, DOF Tiefenschaerfe; v2.1 PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
+# Leotio Studios 3D-Render v2.7 · 26.11.2026: backlit physikalischer: dicker/dunkler Puder laesst weniger Licht durch (BLTHICK, BLDARK); v2.6 LASTMODE glow|shadow|backlit (Schatten springt; Quadrat von hinten durchleuchtet); v2.5 LAST Schlusslicht (vorher dunkler, auf dem letzten Schlag Licht an, Rillen gluehen kurz); v2.4 SWEEP mit Abdunkeln der Hauptsonne (SWEEPDIM), Staerke passend zum flachen Winkel; v2.3 SWEEP jetzt flache Sonne, die einmal um das Relief wandert (kein Lichtfleck, Rand bleibt sauber); v2.2 SUBF/SLOMO Zeitlupe nach dem 1. Einschlag (Takt bleibt), SWEEP Streiflicht zum Schluss, DOF Tiefenschaerfe; v2.1 PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -69,11 +69,19 @@ if os.environ.get('LAST'):   # Rillen-Gluehen: alles unter halber Rillentiefe (R
     gm3=N.new('ShaderNodeMath'); gm3.operation='MULTIPLY'; Lk.new(gm2.outputs[0],gm3.inputs[0]); Lk.new(GLOWV.outputs[0],gm3.inputs[1])
     if os.environ.get('LASTMODE')=='backlit':   # Papier von hinten durchleuchtet: ganzes Quadrat leuchtet in seiner Farbe, Rillen (duenner) staerker
         tint=N.new('ShaderNodeMix'); tint.data_type='RGBA'; tint.blend_type='MULTIPLY'; tint.inputs['Factor'].default_value=1.0
-        tint.inputs['B'].default_value=(1.0,0.90,0.74,1); Lk.new(wetmix.outputs['Result'],tint.inputs['A']); Lk.new(tint.outputs['Result'],bsdf.inputs['Emission Color'])
+        tint.inputs['B'].default_value=(1.0,0.90,0.74,1)
+        # Durchlicht: Farbe filtert (dunkle Farben schlucken mehr) -> Farbe hoch BLDARK
+        cpow=N.new('ShaderNodeGamma'); cpow.inputs['Gamma'].default_value=float(os.environ.get('BLDARK','2.0')); Lk.new(wetmix.outputs['Result'],cpow.inputs['Color'])
+        Lk.new(cpow.outputs['Color'],tint.inputs['A']); Lk.new(tint.outputs['Result'],bsdf.inputs['Emission Color'])
         gth=N.new('ShaderNodeMath'); gth.operation='MULTIPLY_ADD'; gth.inputs[1].default_value=float(os.environ.get('BLGROOVE','1.8')); gth.inputs[2].default_value=1.0
         Lk.new(gz.outputs[0],gth.inputs[0])
         gbl=N.new('ShaderNodeMath'); gbl.operation='MULTIPLY'; Lk.new(gth.outputs[0],gbl.inputs[0]); Lk.new(gq.outputs[0],gbl.inputs[1])
-        gm3=N.new('ShaderNodeMath'); gm3.operation='MULTIPLY'; Lk.new(gbl.outputs[0],gm3.inputs[0]); Lk.new(GLOWV.outputs[0],gm3.inputs[1])
+        # dicke Puderschicht laesst weniger durch: Transmission = 1 - BLTHICK*Hoehe*Bedeckung
+        tr1=N.new('ShaderNodeMath'); tr1.operation='MULTIPLY'; Lk.new(imgH.outputs['Color'],tr1.inputs[0]); Lk.new(imgD.outputs['Alpha'],tr1.inputs[1])
+        tr2=N.new('ShaderNodeMath'); tr2.operation='MULTIPLY_ADD'; tr2.use_clamp=True; tr2.inputs[1].default_value=-float(os.environ.get('BLTHICK','2.5')); tr2.inputs[2].default_value=1.0; Lk.new(tr1.outputs[0],tr2.inputs[0])
+        tr3=N.new('ShaderNodeMath'); tr3.operation='MAXIMUM'; tr3.inputs[1].default_value=0.08; Lk.new(tr2.outputs[0],tr3.inputs[0])
+        gtr=N.new('ShaderNodeMath'); gtr.operation='MULTIPLY'; Lk.new(gbl.outputs[0],gtr.inputs[0]); Lk.new(tr3.outputs[0],gtr.inputs[1])
+        gm3=N.new('ShaderNodeMath'); gm3.operation='MULTIPLY'; Lk.new(gtr.outputs[0],gm3.inputs[0]); Lk.new(GLOWV.outputs[0],gm3.inputs[1])
     gsum=N.new('ShaderNodeMath'); gsum.operation='ADD'; Lk.new(emis.outputs[0],gsum.inputs[0]); Lk.new(gm3.outputs[0],gsum.inputs[1])
     Lk.new(gsum.outputs[0],bsdf.inputs['Emission Strength'])
 else:
