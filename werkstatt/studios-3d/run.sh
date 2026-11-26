@@ -1,14 +1,15 @@
 #!/bin/bash
-# Leotio Studios 3D-Lauf v15 · 25.11.2026
+# Leotio Studios 3D-Lauf v16 · 26.11.2026: raeumt vor jedem Lauf alle alten Lauf-Ordner ab (sim*, pv*, ex*, prev, final, alt)
 # Aufruf: ./run.sh preview | explosion | fuenf | takt <welle|wasser|licht> | final | variante <schlag|farben|rillen>   (im Ordner ~/Developer/leotio-3d)
-# Loescht nichts: alte Ordner wandern nach alt/
+# Loescht alte Zwischenordner selbst (Mac-Platte knapp)
 set -e
 cd "$(dirname "$0")"
 B=/Applications/Blender.app/Contents/MacOS/Blender
 [ -d .venv ] || { python3 -m venv .venv; .venv/bin/pip install -q numpy scipy pillow; }
 command -v ffmpeg >/dev/null || brew install ffmpeg
-mkdir -p out alt
+mkdir -p out
 weg() { for d in "$@"; do case "$d" in sim*|pv*|ex*) [ -e "./$d" ] && rm -rf "./$d";; esac; done; return 0; }   # alte Zwischendaten loeschen (Michael 25.11.: immer aufraeumen)
+for d in sim* pv* ex* prev final alt; do [ -d "./$d" ] && rm -rf "./$d" || true; done   # v16: Reste aller frueheren Laeufe weg, Videos bleiben in out/
 SIMENV="NEX=10 SCALE=1.3 NP=200000 FINE=0.7 CHALK=0.12 GAP=0.28 FPS=36 DUR=8"
 MODE=${1:-preview}
 if [ "$MODE" = preview ]; then
