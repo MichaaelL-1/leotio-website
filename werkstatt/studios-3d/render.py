@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v2.0 · 26.11.2026: VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
+# Leotio Studios 3D-Render v2.1 · 26.11.2026: PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -39,7 +39,7 @@ PFL=float(os.environ.get('PFLECK','0'))
 if PFL>0:   # liegendes Pulver: Haeufchen, duenne Stellen, Helligkeitsschwankung
     fl=N.new('ShaderNodeTexNoise'); fl.inputs['Scale'].default_value=float(os.environ.get('PFS','90')); fl.inputs['Detail'].default_value=8; fl.inputs['Roughness'].default_value=0.7
     fl2=N.new('ShaderNodeTexNoise'); fl2.inputs['Scale'].default_value=900; fl2.inputs['Detail'].default_value=3
-    fa=N.new('ShaderNodeMath'); fa.operation='MULTIPLY_ADD'; fa.inputs[1].default_value=0.5; Lk.new(fl.outputs['Fac'],fa.inputs[0]); Lk.new(fl2.outputs['Fac'],fa.inputs[2])
+    fa=N.new('ShaderNodeMath'); fa.operation='MULTIPLY_ADD'; fa.inputs[1].default_value=0.5; Lk.new(fl.outputs['Fac'],fa.inputs[0]); f2w=N.new('ShaderNodeMath'); f2w.operation='MULTIPLY'; f2w.inputs[1].default_value=float(os.environ.get('PF2','1')); Lk.new(fl2.outputs['Fac'],f2w.inputs[0]); Lk.new(f2w.outputs[0],fa.inputs[2])
     fb=N.new('ShaderNodeMath'); fb.operation='MULTIPLY_ADD'; fb.inputs[1].default_value=PFL*1.6; fb.inputs[2].default_value=1-PFL*1.6*0.75; Lk.new(fa.outputs[0],fb.inputs[0])
     gm=N.new('ShaderNodeMix'); gm.data_type='RGBA'; gm.blend_type='MULTIPLY'; gm.inputs['Factor'].default_value=1.0
     Lk.new(gain.outputs['Result'],gm.inputs['A']); Lk.new(fb.outputs[0],gm.inputs['B'])

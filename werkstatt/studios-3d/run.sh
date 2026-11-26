@@ -1,5 +1,5 @@
 #!/bin/bash
-# Leotio Studios 3D-Lauf v16 · 26.11.2026: raeumt vor jedem Lauf alle alten Lauf-Ordner ab (sim*, pv*, ex*, prev, final, alt)
+# Leotio Studios 3D-Lauf v17 · 26.11.2026: FINE/CHALK ueberschreibbar; v16: raeumt vor jedem Lauf alle alten Lauf-Ordner ab (sim*, pv*, ex*, prev, final, alt)
 # Aufruf: ./run.sh preview | explosion | fuenf | takt <welle|wasser|licht> | final | variante <schlag|farben|rillen>   (im Ordner ~/Developer/leotio-3d)
 # Loescht alte Zwischenordner selbst (Mac-Platte knapp)
 set -e
@@ -28,7 +28,7 @@ elif [ "$MODE" = fuenf ]; then
   ffmpeg -loglevel error -y -framerate 24 -i pv5/f_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 22 out/k2-3d-fuenf.mp4
 elif [ "$MODE" = takt ]; then
   V=$2; weg simT_$V pvT_$V
-  TAKT=takt.json NOFALL=1 VAR=$V SCALE=1.0 NP=${NP:-700000} SOFT=${SOFT:-1} MW=${MW:-0.57} FINE=0.8 CHALK=0.12 DUST=${DUST:-0} HT=0.3 FPS=36 DUR=8 NSPARK=${NSPARK:-26000} WMODE=${WMODE:-} .venv/bin/python sim.py simT_$V
+  TAKT=takt.json NOFALL=1 VAR=$V SCALE=1.0 NP=${NP:-700000} SOFT=${SOFT:-1} MW=${MW:-0.57} FINE=${FINE:-0.8} CHALK=${CHALK:-0.12} DUST=${DUST:-0} HT=0.3 FPS=36 DUR=8 NSPARK=${NSPARK:-26000} WMODE=${WMODE:-} .venv/bin/python sim.py simT_$V
   ENGINE=${ENGINE:-EEVEE} GPU=${GPU:-} EEVEE_SPP=16 SPP=${SPP:-24} GAIN=1.2 PALPHA=0.3 RX=960 RY=540 $B -b --python render.py -- simT_$V pvT_$V ${FRAMES:-0-287} 2>&1 | grep '^frame' | tail -1
   ffmpeg -loglevel error -y -framerate 24 -start_number ${FSTART:-0} -i pvT_$V/f_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 22 out/k2-3d-takt-$V.mp4   # Teil-Lauf: FRAMES=168-287 FSTART=168 NP=150000 MW=2.66
   weg simT_$V pvT_$V
