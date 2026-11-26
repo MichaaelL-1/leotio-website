@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Szene v1.3 · 25.11.2026: Logo als Papier-Relief, Licht, Kamera (Blender bpy)
+# Leotio Studios 3D-Szene v1.4 · 26.11.2026: GPUTYPE (METAL Mac, HIP/CUDA/OPTIX PC); v1.3: Logo als Papier-Relief, Licht, Kamera (Blender bpy)
 import bpy, math, sys, os
 from mathutils import Vector
 U=0.01            # 1 Logo-Einheit = 1 cm, Logo 2 m
@@ -84,8 +84,8 @@ def build(cam_tilt=28.0, res=(1920,1080), samples=64):
     if eng=='CYCLES':
         sc.render.engine='CYCLES'; sc.cycles.device='CPU'
         if os.environ.get('GPU'):
-            p=bpy.context.preferences.addons['cycles'].preferences; p.compute_device_type='METAL'; p.get_devices()
-            for d in p.devices: d.use=(d.type=='METAL')
+            p=bpy.context.preferences.addons['cycles'].preferences; GT=os.environ.get('GPUTYPE','METAL'); p.compute_device_type=GT; p.get_devices()
+            for d in p.devices: d.use=(d.type==GT)
             sc.cycles.device='GPU'
     sc.cycles.use_denoising=True
     sc.render.resolution_x,sc.render.resolution_y=res; sc.render.resolution_percentage=100
