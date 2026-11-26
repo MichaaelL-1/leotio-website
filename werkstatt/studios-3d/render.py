@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v2.3 · 26.11.2026: SWEEP jetzt flache Sonne, die einmal um das Relief wandert (kein Lichtfleck, Rand bleibt sauber); v2.2 SUBF/SLOMO Zeitlupe nach dem 1. Einschlag (Takt bleibt), SWEEP Streiflicht zum Schluss, DOF Tiefenschaerfe; v2.1 PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
+# Leotio Studios 3D-Render v2.4 · 26.11.2026: SWEEP mit Abdunkeln der Hauptsonne (SWEEPDIM), Staerke passend zum flachen Winkel; v2.3 SWEEP jetzt flache Sonne, die einmal um das Relief wandert (kein Lichtfleck, Rand bleibt sauber); v2.2 SUBF/SLOMO Zeitlupe nach dem 1. Einschlag (Takt bleibt), SWEEP Streiflicht zum Schluss, DOF Tiefenschaerfe; v2.1 PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -198,7 +198,8 @@ if SWP:
     sw0,sw1=[float(v) for v in SWP.split(',')[:2]]
     import math
     from mathutils import Vector
-    SWE=float(os.environ.get('SWEEPE','2.5')); SEL=math.radians(float(os.environ.get('SWEEPEL','6')))
+    SWE=float(os.environ.get('SWEEPE','40')); SDIM=float(os.environ.get('SWEEPDIM','0.3'))
+    MAINS=[o for o in bpy.data.objects if o.type=='LIGHT' and o.data.type=='SUN']; MAINE=[o.data.energy for o in MAINS]; SEL=math.radians(float(os.environ.get('SWEEPEL','6')))
     bpy.ops.object.light_add(type='SUN',location=(0,0,5)); SL=bpy.context.active_object
     SL.data.angle=math.radians(1.5); SL.data.energy=0.0; SL.data.color=(1.0,0.97,0.92)
     def swdir(pr):
@@ -219,8 +220,11 @@ for vf in frames:
     if SWP:
         pr=(vf-sw0)/max(sw1-sw0,1)
         if 0<=pr<=1:
-            SL.rotation_euler=swdir(pr); SL.data.energy=SWE*np.sin(np.pi*pr)**0.7
-        else: SL.data.energy=0.0
+            env_=np.sin(np.pi*pr)**0.7; SL.rotation_euler=swdir(pr); SL.data.energy=SWE*env_
+            for o_,e_ in zip(MAINS,MAINE): o_.data.energy=e_*(1-(1-SDIM)*env_)
+        else:
+            SL.data.energy=0.0
+            for o_,e_ in zip(MAINS,MAINE): o_.data.energy=e_
     z=np.load(f'{SIM}/pts_{f:04d}.npz'); P=z['p']; C=z['c'].astype(np.float32); Rr=z['r'].astype(np.float32)
     me.clear_geometry()
     n=len(P)
