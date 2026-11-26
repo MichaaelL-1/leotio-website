@@ -1,4 +1,4 @@
-# Leotio Studios Durchlicht v1.0 · 26.11.2026: Nachbearbeitung "Papier von hinten durchleuchtet" nur im Quadrat; helle/duenne Stellen lassen viel Licht durch, dunkle kaum
+# Leotio Studios Durchlicht v1.1 · 26.11.2026: DL_MIN Grundlicht fuer dunkle Farben; v1.0 Nachbearbeitung "Papier von hinten durchleuchtet" nur im Quadrat; helle/duenne Stellen lassen viel Licht durch, dunkle kaum
 # Aufruf: python3 durchlicht.py ein.mp4 aus.mp4 [erstes_bild=195] ; Umgebung: DL_PEAK=223 DL_A=208 DL_TAU=10 DL_G=1.6 DL_K=2.2
 import numpy as np, os, sys, subprocess
 from PIL import Image
@@ -22,7 +22,8 @@ for i,f in enumerate(fs):
     lin=a**2.2
     lum=(0.2126*lin[...,0]+0.7152*lin[...,1]+0.0722*lin[...,2])[...,None]
     lum=gaussian_filter(lum[...,0],1.5)[...,None]           # Korn nicht mitverstaerken
-    T=np.clip((lum-0.04)/0.42,0,1)**K                     # helle Farbe/duenner Puder: viel Licht; dunkle Pigmente: kaum
+    T0=np.clip((lum-0.04)/0.42,0,1)**K; MN=float(os.environ.get('DL_MIN','0.3'))
+    T=MN+(1-MN)*T0                                         # helle Farbe/duenner Puder: viel Licht; dunkle Pigmente: weniger
     light=lin*(1+G*g*T*3*warm)                            # Lampe hinter dem Papier, durch die Farbe gefiltert
     light=np.where(light>0.6,0.6+0.4*np.tanh((light-0.6)/0.4),light)            # weiche Schulter statt hartem Ausbrennen
     out=(lin*(1-M)+light*M)
