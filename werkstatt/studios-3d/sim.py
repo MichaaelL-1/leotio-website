@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v3.3 · 25.11.2026: WMODE=aquarell,welle (Wasser spuelt aus 4 Ecken ueber das ganze Quadrat, Flaeche behaelt die Farbe, Rillen werden frei); v3.2 aquarell
+# Leotio Studios Puder-Simulation v3.4 · 26.11.2026: NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -31,7 +31,7 @@ for n,ci in enumerate(order[:NEX]):
     cx,cy=cells[ci]
     t0=1.1+n*float(os.environ.get('GAP','0.33'))*12/NEX+rng.uniform(-0.08,0.08)
     EX.append(dict(p=np.array([cx+rng.uniform(-0.2,0.2),cy+rng.uniform(-0.2,0.2)]),t=t0,c=n%len(pal),lob=int(rng.integers(5,11)),phi=rng.uniform(0,6.3)))
-VAR=os.environ.get('VAR','')
+VAR=os.environ.get('VAR',''); NOFUGE=int(os.environ.get('NOFUGE','0'))
 if VAR=='schlag':      # alle Pakete fast gleichzeitig
     for e in EX: e['t']=1.0+float(rng.uniform(0,0.35))
 if VAR=='farben':      # Farbe fuer Farbe, je 2 Pakete
@@ -67,7 +67,7 @@ def deposit(idx):
     if len(idx)==0: return
     x=pos[idx,0]; y=pos[idx,1]
     i=np.clip(((1-y)/2*R).astype(int),0,R-1); j=np.clip(((x+1)/2*R).astype(int),0,R-1)
-    m=(0.6+k[idx]*0.04)*MW
+    m=(0.6+k[idx]*0.04)*MW*(1-G[i,j]*NOFUGE)   # NOFUGE: Koerner ueber einer Fuge fallen hindurch
     np.add.at(thick,(i,j),m)
     for q in range(3): np.add.at(acc[...,q],(i,j),pcol[idx,q]*m)
 def turb(p,t):
@@ -167,6 +167,7 @@ for f in range(NF):
     colr=cc/np.maximum(th,1e-4)[...,None]
     cov=1-np.exp(-th/0.10)
     fxw=np.zeros((R,R),np.float32); fxg=np.zeros((R,R),np.float32); fxb=np.zeros((R,R),np.float32); thick_show=1.0; ext=None
+    if NOFUGE: cov=cov*(1-GS); thick_show=1-GS   # Fugen bleiben sauber, auch am Rand der Ablage
     if VAR=='rillen':   # am Ende wird der Puder von links nach rechts aus den Rillen geblasen
         prog=np.clip((t-(DUR-2.4))/1.6,0,1); wipe=np.clip((prog*1.4-XS)/0.4,0,1)
         cov=cov*(1-GS*wipe); thick_show=1-GS*wipe
