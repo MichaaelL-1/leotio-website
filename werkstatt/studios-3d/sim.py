@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v3.4 · 26.11.2026: NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
+# Leotio Studios Puder-Simulation v3.5 · 26.11.2026: UPF Spritzhoehe, GRAVF Schwerkraft-Faktor (Wolke setzt sich schneller); v3.4 NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -126,7 +126,7 @@ for f in range(NF):
                 spike=1+2.5*np.abs(np.sin(E['lob']*th/2+E['phi']))**10      # Strahlen wie bei echtem Puder
                 reach=rng.gamma(2.5,0.09,n)*spike*SC*E.get('sc',1.0)                          # Reichweite in m
                 sp=reach*k[sl]
-                up=rng.gamma(2.0,0.06,n)*k[sl]
+                up=rng.gamma(2.0,0.06,n)*k[sl]*float(os.environ.get('UPF','1'))
                 FLW=E.get('fl',0.02); ELS,ELA=E.get('el',[1.0,0.0]); ca,sa=np.cos(np.radians(ELA)),np.sin(np.radians(ELA))
                 ux=np.cos(th)*sp*ELS; uy=np.sin(th)*sp/np.sqrt(ELS)                                   # gestreckte Wolke, gedreht um ELA
                 vel[sl,0]=ux*ca-uy*sa; vel[sl,1]=ux*sa+uy*ca; vel[sl,2]=up
@@ -138,7 +138,7 @@ for f in range(NF):
         if fl.any():
             v=vel[fl]; p=pos[fl]; kk=k[fl][:,None]
             v=v*np.exp(-kk*dt)
-            v[:,2]-=9.81*dt
+            v[:,2]-=9.81*float(os.environ.get('GRAVF','1'))*dt
             v+= turb(p,ts)*0.6*dt*kk*0.3
             p=p+v*dt
             # unsichtbare Wand am Quadratrand: aussen bleibt sauber
