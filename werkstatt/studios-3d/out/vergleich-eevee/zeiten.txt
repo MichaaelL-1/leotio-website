@@ -1,0 +1,8 @@
+Vergleich EEVEE/Cycles, Pulver A (Sim: takt.json, NOFUGE=1, NP=700000, SOFT=1 MW=0.57 FINE=0.8 CHALK=0.12 HT=0.3 FPS=36 DUR=8, VAR=a)
+Option A: VOL=1 VBOUNCE=1 VVOX=0.004 VDEN=40 VSAT=1.7 VANI=0.2 VNOISE=3 VNS=18 PFLECK=0.5 VSHADOW=0 VRAD=10 VPAST=0 GAIN=1.2 PALPHA=0.3
+Frames 60, 100, 250 in 1920x1080, je Profil ein Blender-Prozess (Blender 4.5.10, Windows-PC, AMD HIP)
+Simulation neu gerechnet (alte Daten waren geloescht): 6 min 36 s
+
+a) EEVEE, EEVEE_SPP=32 (CPU/ohne GPU-Variable): 34 s gesamt (3 Frames), Fehler: keine, Ordner: lauf/cmp_eevee32 (gel.)
+b) EEVEE, EEVEE_SPP=64:                         29 s gesamt (3 Frames), Fehler: keine, Ordner: lauf/cmp_eevee64 (gel.)
+c) CYCLES GPU=1 GPUTYPE=HIP SPP=24:            621 s gesamt (3 Frames, ca. 3,5 min pro Frame), Fehler: keine, Ordner: lauf/cmp_cycles (gel.)
