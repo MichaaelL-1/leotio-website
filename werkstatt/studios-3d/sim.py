@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v3.5 · 26.11.2026: UPF Spritzhoehe, GRAVF Schwerkraft-Faktor (Wolke setzt sich schneller); v3.4 NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
+# Leotio Studios Puder-Simulation v3.6 · 26.11.2026: SHOCK Druckwelle schiebt liegenden Puder ringfoermig weg, DUSTEND Schwebstaub setzt sich allmaehlich; v3.5 UPF Spritzhoehe, GRAVF Schwerkraft-Faktor (Wolke setzt sich schneller); v3.4 NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -149,8 +149,27 @@ for f in range(NF):
             pos[fl]=p; vel[fl]=v
             idx=np.nonzero(fl)[0]
             landed=idx[pos[idx,2]<=hgt(pos[idx,0],pos[idx,1])]
-            if ts>DUR-0.8: landed=idx   # Rest-Schwebstaub legt sich: am Ende liegt alles
+            DE=float(os.environ.get('DUSTEND','0.8'))
+            if ts>DUR-DE:   # Rest-Schwebstaub legt sich allmaehlich: am Ende liegt alles
+                rem=max(DUR-0.3-ts,dt); pr=min(1.0,dt/rem) if ts<DUR-0.3 else 1.0
+                landed=np.union1d(landed,idx[rng.random(len(idx))<pr])
             deposit(landed); state[landed]=2
+    # Druckwelle: Einschlag schiebt liegenden Puder ringfoermig nach aussen (ab dem 2. Paket)
+    SHK=float(os.environ.get('SHOCK','0'))
+    if SHK>0:
+        SR=float(os.environ.get('SHOCKR','0.28')); STD=0.2
+        for e,E in enumerate(EX):
+            if e==0: continue
+            pr=(t-E['t'])/STD
+            if 0<pr<=1+1e-6:
+                rr=SR*(0.25+0.75*pr); w=0.06
+                dd=np.sqrt((XX-E['p'][0])**2+(YY-E['p'][1])**2)
+                inn=dd<rr; ring=(dd>=rr)&(dd<rr+w)&(G<0.5)
+                if inn.any() and ring.any():
+                    fr=SHK/(STD*FPS)
+                    mt=thick[inn]*fr; ma=acc[inn]*fr
+                    thick[inn]-=mt; acc[inn]-=ma
+                    nr=int(ring.sum()); thick[ring]+=mt.sum()/nr; acc[ring]+=ma.sum(0)/nr
     # Ausgabe: fliegende Teilchen + fallende Pakete
     fl=np.nonzero(state==1)[0]
     zc=np.clip(pos[fl,2:3]/0.25,0,1)*HT; P=[pos[fl]]; C=[pcol[fl]*(1-zc)+zc]; RR=[rad[fl]]

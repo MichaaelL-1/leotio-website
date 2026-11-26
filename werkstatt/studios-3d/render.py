@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v2.1 · 26.11.2026: PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
+# Leotio Studios 3D-Render v2.2 · 26.11.2026: SUBF/SLOMO Zeitlupe nach dem 1. Einschlag (Takt bleibt), SWEEP Streiflicht zum Schluss, DOF Tiefenschaerfe; v2.1 PF2 Gewicht des Glitzerrauschens (0 = mehlig matt); v2.0 VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -189,7 +189,32 @@ if HAVEW:
     try:
         col_=bpy.data.collections.new('NurWasser'); col_.objects.link(wob); WL.light_linking.receiver_collection=col_
     except Exception as e_: print('light linking fehlt',e_)
-for f in frames:
+# --- Tiefenschaerfe: Fokus auf der Papierebene, Wolken in der Luft werden weich
+if float(os.environ.get('DOF','0'))>0:
+    cam.data.dof.use_dof=True; cam.data.dof.focus_distance=cam.location.z; cam.data.dof.aperture_fstop=float(os.environ['DOF'])
+# --- Streiflicht: schmales Flaechenlicht wandert flach ueber das Relief
+SWP=os.environ.get('SWEEP')
+if SWP:
+    sw0,sw1=[float(v) for v in SWP.split(',')[:2]]; SWE=float(os.environ.get('SWEEPE','60'))
+    bpy.ops.object.light_add(type='AREA',location=(-2,0,0.14)); SL=bpy.context.active_object
+    SL.data.shape='RECTANGLE'; SL.data.size=0.06; SL.data.size_y=3.0; SL.data.energy=0.0; SL.data.color=(1.0,0.98,0.95)
+# --- Zeitlupe: Videobild v -> Simulationsbild (SUBF Sim-Bilder je Videobild); SLOMO=a,b,c,s: a..b Tempo s, b..c holt auf, ab c wieder im Takt
+SUBF=int(os.environ.get('SUBF','1'))
+def simf(v):
+    g=float(v)
+    if os.environ.get('SLOMO'):
+        a,b,c,sp=[float(x) for x in os.environ['SLOMO'].split(',')]
+        k=(c-a-(b-a)*sp)/(c-b)
+        if a<=v<b: g=a+(v-a)*sp
+        elif b<=v<c: g=a+(b-a)*sp+(v-b)*k
+    return int(round(g*SUBF))
+for vf in frames:
+    f=simf(vf)
+    if SWP:
+        pr=(vf-sw0)/max(sw1-sw0,1)
+        if 0<=pr<=1:
+            SL.location.x=-1.5+3.0*pr; SL.data.energy=SWE*np.sin(np.pi*pr)**0.7
+        else: SL.data.energy=0.0
     z=np.load(f'{SIM}/pts_{f:04d}.npz'); P=z['p']; C=z['c'].astype(np.float32); Rr=z['r'].astype(np.float32)
     me.clear_geometry()
     n=len(P)
@@ -222,6 +247,6 @@ for f in frames:
             imgS.image=bpy.data.images.load(os.path.abspath(f'{SIM}/wfo_{f:04d}.png')); imgS.image.colorspace_settings.name='Non-Color'
         co[:,2]=zz; wme.vertices.foreach_set('co',co.ravel()); wme.update()
         wnz.inputs['W'].default_value=f*0.06
-    sc.render.filepath=f'{OUTD}/f_{f:04d}.png'
+    sc.render.filepath=f'{OUTD}/f_{vf:04d}.png'
     bpy.ops.render.render(write_still=True)
-    print('frame',f,'punkte',n,flush=True)
+    print('frame',vf,'sim',f,'punkte',n,flush=True)
