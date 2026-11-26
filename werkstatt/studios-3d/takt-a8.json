@@ -1,5 +1,5 @@
 {
- "_": "Leotio Studios Takt A8 \u00b7 26.11.2026: wie takt.json v3, spaete Schlaege 3-5 groesser und dichter (sc, dn)",
+ "_": "Leotio Studios Takt A8 \u00b7 27.11.2026: wie takt.json v3, spaete Schlaege 3-5 groesser und dichter (sc, dn); 6. Schlag 8,60 s kleiner gelber Einschlag vor dem Schlusslicht",
  "slow": 1.5,
  "dauer": 12.0,
  "bpm": 90,
@@ -60,6 +60,16 @@
     18
    ],
    "dn": 1.6
+  },
+  {
+   "t": 8.6,
+   "p": [
+    0.42,
+    0.12
+   ],
+   "c": 0,
+   "sc": 0.9,
+   "dn": 1.0
   }
  ],
  "clear": 7.58,
