@@ -1,4 +1,4 @@
-# Leotio Studios 3D-Render v1.9 · 26.11.2026: VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
+# Leotio Studios 3D-Render v2.0 · 26.11.2026: VNOISE Wolkenfetzen + Farbschwankung, PFLECK unruhige Puderflaeche; v1.9 VOL=1 Puderwolken als Volumen (je Farbe ein Rauchkoerper, leuchtend, VSAT Farbtiefe); v1.8 nasse Flaeche
 import bpy, sys, os, numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import scene
@@ -35,7 +35,18 @@ mix.inputs['A'].default_value=paper_col
 gain=N.new('ShaderNodeMix'); gain.data_type='RGBA'; gain.blend_type='MULTIPLY'; gain.inputs['Factor'].default_value=1.0
 gain.inputs['B'].default_value=(GAIN,GAIN,GAIN,1)
 Lk.new(imgD.outputs['Color'],gain.inputs['A'])
-Lk.new(imgD.outputs['Alpha'],mix.inputs['Factor']); Lk.new(gain.outputs['Result'],mix.inputs['B'])
+PFL=float(os.environ.get('PFLECK','0'))
+if PFL>0:   # liegendes Pulver: Haeufchen, duenne Stellen, Helligkeitsschwankung
+    fl=N.new('ShaderNodeTexNoise'); fl.inputs['Scale'].default_value=float(os.environ.get('PFS','90')); fl.inputs['Detail'].default_value=8; fl.inputs['Roughness'].default_value=0.7
+    fl2=N.new('ShaderNodeTexNoise'); fl2.inputs['Scale'].default_value=900; fl2.inputs['Detail'].default_value=3
+    fa=N.new('ShaderNodeMath'); fa.operation='MULTIPLY_ADD'; fa.inputs[1].default_value=0.5; Lk.new(fl.outputs['Fac'],fa.inputs[0]); Lk.new(fl2.outputs['Fac'],fa.inputs[2])
+    fb=N.new('ShaderNodeMath'); fb.operation='MULTIPLY_ADD'; fb.inputs[1].default_value=PFL*1.6; fb.inputs[2].default_value=1-PFL*1.6*0.75; Lk.new(fa.outputs[0],fb.inputs[0])
+    gm=N.new('ShaderNodeMix'); gm.data_type='RGBA'; gm.blend_type='MULTIPLY'; gm.inputs['Factor'].default_value=1.0
+    Lk.new(gain.outputs['Result'],gm.inputs['A']); Lk.new(fb.outputs[0],gm.inputs['B'])
+    am=N.new('ShaderNodeMath'); am.operation='MULTIPLY_ADD'; am.use_clamp=True; am.inputs[1].default_value=PFL*2.2; am.inputs[2].default_value=1-PFL*2.2*0.55
+    Lk.new(fl.outputs['Fac'],am.inputs[0])
+    aa=N.new('ShaderNodeMath'); aa.operation='MULTIPLY'; aa.use_clamp=True; Lk.new(imgD.outputs['Alpha'],aa.inputs[0]); Lk.new(am.outputs[0],aa.inputs[1])
+Lk.new(aa.outputs[0] if PFL>0 else imgD.outputs['Alpha'],mix.inputs['Factor']); Lk.new(gm.outputs['Result'] if PFL>0 else gain.outputs['Result'],mix.inputs['B'])
 # Effekt-Karte: R = nass (Wasser in den Rillen), G = Leuchten
 imgF=N.new('ShaderNodeTexImage'); imgF.extension='CLIP'; Lk.new(comb.outputs[0],imgF.inputs['Vector'])
 sepF=N.new('ShaderNodeSeparateColor'); Lk.new(imgF.outputs['Color'],sepF.inputs['Color'])
@@ -118,6 +129,17 @@ if VOL:
         if 'Absorption Color' in pvn.inputs: pvn.inputs['Absorption Color'].default_value=(1,1,1,1)   # keine Eintruebung: Pulver streut, schluckt kaum
         if 'Emission Strength' in pvn.inputs and float(os.environ.get('VGLOW','0'))>0:
             pvn.inputs['Emission Color'].default_value=(*col,1); pvn.inputs['Emission Strength'].default_value=float(os.environ['VGLOW'])
+        VNZ=float(os.environ.get('VNOISE','0'))
+        if VNZ>0:   # Fetzen und Loecher in der Wolke, Farbe schwankt
+            vl=vm.node_tree.links; tc=vn.new('ShaderNodeTexCoord')
+            nz=vn.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value=float(os.environ.get('VNS','14')); nz.inputs['Detail'].default_value=10; nz.inputs['Roughness'].default_value=0.68
+            if 'Distortion' in nz.inputs: nz.inputs['Distortion'].default_value=0.6
+            vl.new(tc.outputs['Object'],nz.inputs['Vector'])
+            cr=vn.new('ShaderNodeMapRange'); cr.inputs['From Min'].default_value=0.5-0.5/VNZ; cr.inputs['From Max'].default_value=0.5+0.5/VNZ; cr.inputs['To Max'].default_value=VDEN; cr.clamp=True
+            vl.new(nz.outputs['Fac'],cr.inputs['Value']); vl.new(cr.outputs['Result'],pvn.inputs['Density'])
+            nz2=vn.new('ShaderNodeTexNoise'); nz2.inputs['Scale'].default_value=5; nz2.inputs['Detail'].default_value=2; vl.new(tc.outputs['Object'],nz2.inputs['Vector'])
+            cm=vn.new('ShaderNodeMix'); cm.data_type='RGBA'; cm.inputs['A'].default_value=(*[c*0.62 for c in col],1); cm.inputs['B'].default_value=(*[min(1,c*1.12+0.04) for c in col],1)
+            vl.new(nz2.outputs['Fac'],cm.inputs['Factor']); vl.new(cm.outputs['Result'],pvn.inputs['Color'])
         out_=[n_ for n_ in vn if n_.type=='OUTPUT_MATERIAL'][0]; vm.node_tree.links.new(pvn.outputs[0],out_.inputs['Volume'])
         sm_.inputs['Material'].default_value=vm
         md=vo.modifiers.new('w','NODES'); md.node_group=g
