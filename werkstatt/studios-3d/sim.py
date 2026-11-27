@@ -1,4 +1,4 @@
-# Leotio Studios Puder-Simulation v3.7 · 26.11.2026: STARJIT unregelmaessige Strahlen (ungleich lang, kein exakter Stern), GRVSINK Staub ueber Rillen sinkt schneller (Rillen frueher sauber), WALL Abstand der Wolke zum Quadratrand, je Schlag 'dn' (dichter: mehr Masse, groessere Koerner); v3.6 SHOCK Druckwelle schiebt liegenden Puder ringfoermig weg, DUSTEND Schwebstaub setzt sich allmaehlich; v3.5 UPF Spritzhoehe, GRAVF Schwerkraft-Faktor (Wolke setzt sich schneller); v3.4 NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
+# Leotio Studios Puder-Simulation v3.8 · 27.11.2026: je Schlag 'wd'=[Winkel Grad, Staerke 0..1] Wurfrichtung (Puder fliegt bevorzugt in diese Richtung); v3.7 STARJIT unregelmaessige Strahlen (ungleich lang, kein exakter Stern), GRVSINK Staub ueber Rillen sinkt schneller (Rillen frueher sauber), WALL Abstand der Wolke zum Quadratrand, je Schlag 'dn' (dichter: mehr Masse, groessere Koerner); v3.6 SHOCK Druckwelle schiebt liegenden Puder ringfoermig weg, DUSTEND Schwebstaub setzt sich allmaehlich; v3.5 UPF Spritzhoehe, GRAVF Schwerkraft-Faktor (Wolke setzt sich schneller); v3.4 NOFUGE=1 (kein Puder in den Fugen, Fugen bleiben sauber); v3.3 aquarell,welle
 import numpy as np, os, sys
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -45,7 +45,7 @@ if os.environ.get('FUENF'):   # 5 grosse Pakete, jede Farbe einmal: 4 Viertel, z
 TCLR=None
 if os.environ.get('TAKT'):    # Takt-Datei: Zeiten in Video-Sekunden, hier in Simulationszeit umgerechnet
     import json; TK=json.load(open(os.environ['TAKT'])); SL=TK.get('slow',1.5)
-    EX=[dict(p=np.array(h['p'],float),t=h['t']/SL,c=h['c'],sc=h.get('sc',1.0),dn=h.get('dn',1.0),fl=h.get('fl',0.02),el=h.get('el',[1.0,0.0]),lob=int(rng.integers(6,10)),phi=rng.uniform(0,6.3)) for h in TK['hits']]
+    EX=[dict(p=np.array(h['p'],float),t=h['t']/SL,c=h['c'],sc=h.get('sc',1.0),dn=h.get('dn',1.0),wd=h.get('wd'),fl=h.get('fl',0.02),el=h.get('el',[1.0,0.0]),lob=int(rng.integers(6,10)),phi=rng.uniform(0,6.3)) for h in TK['hits']]
     TCLR=TK['clear']/SL
 print('Explosionen', [(round(e['t'],2),e['c']) for e in EX])
 NE=len(EX); N=NE*NP
@@ -131,6 +131,8 @@ for f in range(NF):
                     li=(np.floor((E['lob']*th/(2*np.pi)+E['phi']/np.pi)*2)%nl).astype(int)
                     spike=1+2.5*rl[li]*np.abs(np.sin(E['lob']*th/2+E['phi']+ro[li]))**rw[li]*rng.uniform(0.6,1.0,n)
                 reach=rng.gamma(2.5,0.09,n)*spike*SC*E.get('sc',1.0)                          # Reichweite in m
+                if E.get('wd'):   # v3.8: Wurfrichtung, ohne zusaetzliche Zufallszahlen (Simulation davor bleibt identisch)
+                    wa,ws=np.radians(E['wd'][0]),float(E['wd'][1]); reach=reach*np.clip(1+1.6*ws*np.cos(th-wa),0.15,None)
                 sp=reach*k[sl]
                 up=rng.gamma(2.0,0.06,n)*k[sl]*float(os.environ.get('UPF','1'))
                 FLW=E.get('fl',0.02); ELS,ELA=E.get('el',[1.0,0.0]); ca,sa=np.cos(np.radians(ELA)),np.sin(np.radians(ELA))
