@@ -1,4 +1,4 @@
-# Leotio Studios Durchlicht v1.1 · 26.11.2026: DL_MIN Grundlicht fuer dunkle Farben; v1.0 Nachbearbeitung "Papier von hinten durchleuchtet" nur im Quadrat; helle/duenne Stellen lassen viel Licht durch, dunkle kaum
+# Leotio Studios Durchlicht v1.2 · 27.11.2026: DL_STUFEN Licht in Stufen auf den Schlaegen (z. B. 208:0.35,216:0.7,224:1.0), nach der letzten Stufe kurzer Stoss und schnelles Aus (DL_TAU); v1.1 DL_MIN Grundlicht fuer dunkle Farben; v1.0 Nachbearbeitung "Papier von hinten durchleuchtet" nur im Quadrat; helle/duenne Stellen lassen viel Licht durch, dunkle kaum
 # Aufruf: python3 durchlicht.py ein.mp4 aus.mp4 [erstes_bild=195] ; Umgebung: DL_PEAK=223 DL_A=208 DL_TAU=10 DL_G=1.6 DL_K=2.2
 import numpy as np, os, sys, subprocess
 from PIL import Image
@@ -15,7 +15,16 @@ from scipy.ndimage import gaussian_filter; M=gaussian_filter(M,0.7)[...,None]
 warm=np.array([1.0,0.93,0.80],np.float32)
 for i,f in enumerate(fs):
     v=F0+i
-    if v<LA: g=0.0
+    ST=os.environ.get('DL_STUFEN')
+    if ST:
+        st=[(float(a),float(b)) for a,b in (x.split(':') for x in ST.split(','))]; g=0.0; prev=0.0
+        for n,(fv,lv) in enumerate(st):
+            if v>=fv-2:
+                x=min(1.0,(v-(fv-2))/3); x=x*x*(3-2*x); g=prev+(lv-prev)*x
+            prev=lv if v>=fv+1 else prev
+        lf,ll=st[-1]
+        if v>lf+2: g=ll*np.exp(-(v-lf-2)/TAU)
+    elif v<LA: g=0.0
     elif v<PK: x=(v-LA)/(PK-LA); g=(x*x*(3-2*x))**2
     else: g=np.exp(-(v-PK)/TAU)
     a=np.asarray(Image.open(f'{tmp}/{f}').convert('RGB')).astype(np.float32)/255
