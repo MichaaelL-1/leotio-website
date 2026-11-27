@@ -1,5 +1,5 @@
 {
- "_": "Leotio Studios Takt A8c \u00b7 27.11.2026: wie A8, 6. Schlag Gelb auf 7,60 s (Michael); Licht in 3 Stufen 8,65/8,99/9,33 s (Nachbearbeitung)",
+ "_": "Leotio Studios Takt A8d \u00b7 27.11.2026: wie A8c, 6. Schlag Gelb 7,60 s weiter an den rechten Rand (Michael)",
  "slow": 1.5,
  "dauer": 12.0,
  "bpm": 90,
@@ -64,8 +64,8 @@
   {
    "t": 7.6,
    "p": [
-    0.42,
-    0.12
+    0.74,
+    0.3
    ],
    "c": 0,
    "sc": 0.9,
