@@ -1,4 +1,4 @@
-# Leotio Studios Flow-Story v0.4 · 28.11.2026: FADE0/FADE1 weicher Ausblendverlauf statt Mantaflow-Dissolve (verschwand bei schnellen Stoessen in 4 Bildern), Korn-Regler G1A/G1S/G2A/G2S; v0.3: DEPRAMP (Belag waechst erst mit dem Absinken, nur fuer Einzelwurf-Tests), laengeres Stehen (DISS), Licht wie Runde 9; v0.2: ERMODE=wide|tight (Quellenanordnung); ERUPT=1 Eruption aus einem Punkt (kein Strom von der Seite), Papier-Vorbote (Aufwoelbung); v0.1: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
+# Leotio Studios Flow-Story v0.5 · 28.11.2026: Episch-Test: NOSTREAM, NL lange faserige Fahnen (Stern), HITJSON (eigene Schlagliste), PASTEL, MBLUR, HDFRAME (ein HD-Standbild im selben Lauf); v0.4: FADE0/FADE1 weicher Ausblendverlauf statt Mantaflow-Dissolve (verschwand bei schnellen Stoessen in 4 Bildern), Korn-Regler G1A/G1S/G2A/G2S; v0.3: DEPRAMP (Belag waechst erst mit dem Absinken, nur fuer Einzelwurf-Tests), laengeres Stehen (DISS), Licht wie Runde 9; v0.2: ERMODE=wide|tight (Quellenanordnung); ERUPT=1 Eruption aus einem Punkt (kein Strom von der Seite), Papier-Vorbote (Aufwoelbung); v0.1: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
 # Aufruf: blender -b --python flow_story.py -- AUSGABEORDNER [bake|render|all]
 # Umgebung (optional): TF=228 Bilder (24 fps)  RES=160  RX=640 RY=360 SPP=16  SIM=<simT_a8e>  HITS=0,1,2,3,4,5 (Auswahl)  FRAMES=Liste (nur diese Bilder rendern)
 #   SF=4 Anlaufbilder (Strom von der Seite)  WIN=50 Fenster je Domain  SLOW=0.35 Zeitlupenfaktor  SLOWF=12 Zeitlupenbilder  DOFN=0.15  DW=3.2 DH=1.2
@@ -26,7 +26,7 @@ for o_ in bpy.data.objects:
         o_.rotation_euler = d.to_track_quat('Z', 'Y').to_euler(); o_.data.energy = float(E('SUNE', '2.6')); o_.data.angle = math.radians(float(E('SUNA', '25'))); o_.data.color = (1, 1, 1)
 wn = sc.world.node_tree.nodes['Background']; wn.inputs['Color'].default_value = (0.9, 0.9, 0.9, 1)
 cam.data.dof.use_dof = True; cam.data.dof.focus_distance = cam.location.z; cam.data.dof.aperture_fstop = float(E('DOFN', '0.15'))
-sc.render.use_motion_blur = True; sc.render.motion_blur_shutter = 0.5
+sc.render.use_motion_blur = True; sc.render.motion_blur_shutter = float(E('MBLUR', '0.5'))
 sc.cycles.volume_bounces = 8; sc.cycles.max_bounces = max(sc.cycles.max_bounces, 8)
 
 # --- Papier: groeberes Korn
@@ -110,7 +110,7 @@ RES = int(E('RES', '160')); DW = float(E('DW', '3.2')); DH = float(E('DH', '1.2'
 SLOW = float(E('SLOW', '0.35')); SLOWF = int(E('SLOWF', '12')); DISS = int(E('DISS', '36'))
 SZ = [float(v) for v in E('SZ', '1.0,0.75,1.15,0.9,1.15,0.45').split(',')]                 # gestaffelte Groessen je Wurf
 THROW = [float(v) for v in E('THROW', '-20,160,75,-110,20,250').split(',')]                # Wurfrichtung in Grad (Bewegungsrichtung), 6. aus wd
-hits = TAKT['hits']; SEL = [int(v) for v in E('HITS', ','.join(str(i) for i in range(len(hits)))).split(',')]
+hits = json.loads(E('HITJSON')) if E('HITJSON') else TAKT['hits']; SEL = [int(v) for v in E('HITS', ','.join(str(i) for i in range(len(hits)))).split(',')]
 fi_ = [int(round(h['t'] * 24)) + 1 for h in hits]   # Einschlagbild (1-basiert)
 def bound(i):   # Fenster einer Domain: vom Anlauf bis kurz vor dem Anlauf des naechsten Wurfs (keine Fremd-Emission)
     s = max(1, fi_[i] - SF - 1); e = fi_[i] + WIN
@@ -119,6 +119,8 @@ def bound(i):   # Fenster einer Domain: vom Anlauf bis kurz vor dem Anlauf des n
 doms = {}
 def material(i, name):
     c = PAL[hits[i]['c']]; L = lin3(c)
+    PA = float(E('PASTEL', '0'))
+    if hits[i]['c'] != 0 and PA > 0: L = [l * (1 - PA) + PA * 0.8 for l in L]   # nicht-gelbe Farben pastelliger (mehr Weiss), Gelb bleibt Indischgelb
     yellow = hits[i]['c'] == 0
     cm = [float(v) for v in E('YCM', '1,0.72,0.32').split(',')] if yellow else [1, 1, 1]; mx_ = max(L)
     ac = [float(v) for v in E('YAC', '0.93,0.74,0.26').split(',')] if yellow else [1 - 0.8 * (1 - l / mx_) for l in L]   # Absorption nach Pigmentfarbe: Rest-Kanaele werden geschluckt, Schatten bleiben neutral
@@ -186,11 +188,12 @@ def build_hit(i):
     if h.get('wd'): th = math.radians(h['wd'][0])
     dv = (math.cos(th), math.sin(th)); sz = SZ[i] if i < len(SZ) else 1.0
     VEL = float(E('VEL', '17')) * (0.85 + 0.15 * sz); SL = float(E('STREAML', '0.9'))
-    if not ERUPT: st = quelle(dom, 'Strom%d' % i, 0.07, (px - dv[0] * SL, py - dv[1] * SL, 0.15), (dv[0] * VEL * 0.9, dv[1] * VEL * 0.9, -0.1 * VEL), 0.0, float(E('STREAMD', '2.0')), max(1, fi - SF), SF + 1)
-    if not ERUPT:
+    NOSTREAM = E('NOSTREAM', '0') == '1'
+    if not ERUPT and not NOSTREAM: st = quelle(dom, 'Strom%d' % i, 0.07, (px - dv[0] * SL, py - dv[1] * SL, 0.15), (dv[0] * VEL * 0.9, dv[1] * VEL * 0.9, -0.1 * VEL), 0.0, float(E('STREAMD', '2.0')), max(1, fi - SF), SF + 1)
+    if not ERUPT and not NOSTREAM:
         st.location = (px - dv[0] * SL, py - dv[1] * SL, 0.15); st.keyframe_insert('location', frame=max(1, fi - SF))
         st.location = (px, py, 0.13); st.keyframe_insert('location', frame=fi)
-    else:
+    elif ERUPT:
         bump_pulse(px, py, fi, 'dome%d' % i)
     CR = float(E('CORER', '0.28')) * sz; CD = float(E('COREDENS', '2.5')); CV = VEL * 0.22
     for ci in range(int(E('CORECL', '9'))):
@@ -208,6 +211,10 @@ def build_hit(i):
     for j in range(NR):
         a = 2 * math.pi * (j + rng.uniform(-0.35, 0.35)) / NR; v = VEL * BASEV[j % (NR // 2)] * rng.uniform(0.88, 1.12) * (1 + 0.55 * math.cos(a - th))   # in Wurfrichtung staerker
         quelle(dom, 'Strahl%d_%d' % (i, j), 0.06, (px + math.cos(a) * 0.04, py + math.sin(a) * 0.04, 0.06 if ERUPT else 0.12), (math.cos(a) * v, math.sin(a) * v, (float(E('JETUP', '0.5')) * v * rng.uniform(0.4, 1.2)) if ERUPT else -0.25 * v), 0.0, float(E('JETDENS', '2.2')), fi, 2)
+    NL = int(E('NL', '0'))   # Stern: NL lange, duenne Fahnen mit sehr unterschiedlicher Laenge (Fasern durch Bewegungsunschaerfe)
+    for j in range(NL):
+        a = 2 * math.pi * (j + rng.uniform(-0.4, 0.4)) / NL; v = VEL * rng.uniform(float(E('NLV0', '1.8')), float(E('NLV1', '3.2'))) * (1 + 0.35 * math.cos(a - th))
+        quelle(dom, 'Fahne%d_%d' % (i, j), float(E('NLR', '0.035')), (px + math.cos(a) * 0.06, py + math.sin(a) * 0.06, 0.10), (math.cos(a) * v, math.sin(a) * v, -0.05 * v * rng.uniform(0, 1)), 0.0, float(E('NLD', '1.6')), fi, 3)
     if ERUPT:   # Vorbote: feiner Staubring laeuft ueber die Flaeche, bevor der Durchbruch kommt
         for k in range(10):
             a = 2 * math.pi * k / 10
@@ -229,6 +236,10 @@ if MODE in ('render', 'all'):
     for f in FL:
         t1 = time.time(); sc.frame_set(f); set_deposit(f); set_particles(f); sc.render.filepath = os.path.join(OUT, 'f', 'f_%04d.png' % f); bpy.ops.render.render(write_still=True)
         print('BILD', f, round(time.time() - t1, 1), 's', flush=True)
+    HDF = int(E('HDFRAME', '0'))
+    if HDF:   # ein HD-Standbild im selben Lauf (Cache wird nur im Bake-Prozess gelesen)
+        sc.render.resolution_x, sc.render.resolution_y = 1920, 1080; sc.cycles.samples = int(E('HDSPP', '64')); sc.frame_set(HDF); set_deposit(HDF); set_particles(HDF)
+        sc.render.filepath = os.path.join(OUT, 'hd.png'); bpy.ops.render.render(write_still=True); sc.render.resolution_x, sc.render.resolution_y = RX, RY
     if imgD is not None:   # Maske-Referenz: leeres Papier ohne Deposit
         leer = bpy.data.images.new('leer', 4, 4, alpha=True); leer.pixels = [0.0] * (4 * 4 * 4); leer.colorspace_settings.name = 'sRGB'
         if imgD.image: bpy.data.images.remove(imgD.image)
