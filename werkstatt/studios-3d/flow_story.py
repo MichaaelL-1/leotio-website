@@ -1,4 +1,4 @@
-# Leotio Studios Flow-Story v0.2 · 28.11.2026: ERMODE=wide|tight (Quellenanordnung); ERUPT=1 Eruption aus einem Punkt (kein Strom von der Seite), Papier-Vorbote (Aufwoelbung); v0.1: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
+# Leotio Studios Flow-Story v0.3 · 28.11.2026: DEPRAMP (Belag waechst erst mit dem Absinken, nur fuer Einzelwurf-Tests), laengeres Stehen (DISS), Licht wie Runde 9; v0.2: ERMODE=wide|tight (Quellenanordnung); ERUPT=1 Eruption aus einem Punkt (kein Strom von der Seite), Papier-Vorbote (Aufwoelbung); v0.1: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
 # Aufruf: blender -b --python flow_story.py -- AUSGABEORDNER [bake|render|all]
 # Umgebung (optional): TF=228 Bilder (24 fps)  RES=160  RX=640 RY=360 SPP=16  SIM=<simT_a8e>  HITS=0,1,2,3,4,5 (Auswahl)  FRAMES=Liste (nur diese Bilder rendern)
 #   SF=4 Anlaufbilder (Strom von der Seite)  WIN=50 Fenster je Domain  SLOW=0.35 Zeitlupenfaktor  SLOWF=12 Zeitlupenbilder  DOFN=0.15  DW=3.2 DH=1.2
@@ -46,7 +46,9 @@ if SIM:
     gn_ = pn.nodes.new('ShaderNodeMix'); gn_.data_type = 'RGBA'; gn_.blend_type = 'MULTIPLY'; gn_.inputs['Factor'].default_value = 1.0
     gn_.inputs['B'].default_value = (1.2, 1.2, 1.2, 1); pn.links.new(imgD.outputs['Color'], gn_.inputs['A'])
     mx = pn.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.inputs['A'].default_value = (0.90, 0.905, 0.905, 1)
-    pn.links.new(imgD.outputs['Alpha'], mx.inputs['Factor']); pn.links.new(gn_.outputs['Result'], mx.inputs['B']); pn.links.new(mx.outputs['Result'], pb.inputs['Base Color'])
+    dram = pn.nodes.new('ShaderNodeValue'); dram.outputs[0].default_value = 1.0
+    dam = pn.nodes.new('ShaderNodeMath'); dam.operation = 'MULTIPLY'; pn.links.new(imgD.outputs['Alpha'], dam.inputs[0]); pn.links.new(dram.outputs[0], dam.inputs[1])
+    pn.links.new(dam.outputs[0], mx.inputs['Factor']); pn.links.new(gn_.outputs['Result'], mx.inputs['B']); pn.links.new(mx.outputs['Result'], pb.inputs['Base Color'])
 ERUPT = E('ERUPT', '1') == '1'
 def bump_pulse(px, py, fi, name):   # Vorbote: Papier woelbt sich unter dem Einschlagpunkt kurz auf (nur Schattierung)
     old = [l for l in pn.links if l.to_socket == pb.inputs['Normal']]
@@ -67,8 +69,11 @@ def bump_pulse(px, py, fi, name):   # Vorbote: Papier woelbt sich unter dem Eins
     PRE = int(E('PRE', '4'))
     for fr, v in ((1, 0.0), (max(1, fi - PRE), 0.0), (fi - 1, 1.0), (fi, 1.0), (fi + 2, 0.0)):   # waechst ueber PRE Bilder, faellt mit dem Durchbruch
         amp.outputs[0].default_value = v; amp.outputs[0].keyframe_insert('default_value', frame=fr)
+DEPRAMP = E('DEPRAMP', '0') == '1'
 def set_deposit(f):
     if imgD is None: return
+    if DEPRAMP:   # Einzelwurf-Test: Belag erst D0 Bilder nach dem Einschlag, waechst ueber D1 Bilder (mit dem Absinken der Wolke)
+        x = (f - fi_[SEL[0]] - float(E('DEPD0', '8'))) / float(E('DEPD1', '34')); dram.outputs[0].default_value = max(0.0, min(1.0, x)) ** 1.5
     pth = os.path.join(SIM, 'dep_%04d.png' % min(2 * (f - 1), 575))   # Filmbild n = f-1, Sim-Bild = 2n
     if os.path.exists(pth):
         if imgD.image: bpy.data.images.remove(imgD.image)
@@ -115,8 +120,8 @@ doms = {}
 def material(i, name):
     c = PAL[hits[i]['c']]; L = lin3(c)
     yellow = hits[i]['c'] == 0
-    cm = [1, 0.72, 0.32] if yellow else [1, 1, 1]; mx_ = max(L)
-    ac = [0.93, 0.74, 0.26] if yellow else [1 - 0.8 * (1 - l / mx_) for l in L]   # Absorption nach Pigmentfarbe: Rest-Kanaele werden geschluckt, Schatten bleiben neutral
+    cm = [float(v) for v in E('YCM', '1,0.72,0.32').split(',')] if yellow else [1, 1, 1]; mx_ = max(L)
+    ac = [float(v) for v in E('YAC', '0.93,0.74,0.26').split(',')] if yellow else [1 - 0.8 * (1 - l / mx_) for l in L]   # Absorption nach Pigmentfarbe: Rest-Kanaele werden geschluckt, Schatten bleiben neutral
     m = bpy.data.materials.new(name); m.use_nodes = True; nt = m.node_tree
     for n in list(nt.nodes): nt.nodes.remove(n)
     out = nt.nodes.new('ShaderNodeOutputMaterial'); pv = nt.nodes.new('ShaderNodeVolumePrincipled')
