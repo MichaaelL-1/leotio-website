@@ -1,4 +1,4 @@
-# Leotio Studios Flow-Test v0.4 · 28.11.2026: Deposit-Farbe repariert, FRAMES-Liste, feiner Staub statt grosser Koerner; v0.3: Nahbereich-Maszstab (wenige grosse Koepfe, grobe Koerner aus simT_a8e, Tiefenschaerfe, Bewegungsunschaerfe, schnellerer Stoss/Absetzen); dicker/opaker (mehr Dichte, laengere Quelle), neutrales weisses Licht, symmetrische Strahlen (weniger Drift), Deposit waechst mit dem Aufprall, Domain strikt im Quadrat; v0.2: GRAIN (Korn in der Dichte), mehr Aufloesung moeglich; v0.1: Mantaflow-Rauch fuer genau einen Schlag (Schlag 1, Gelb #E3A21A, p=[-0.5,0.42] aus takt-a8.json)
+# Leotio Studios Flow-Test v0.5 · 28.11.2026: S0 (Einschlagbild, Vorlauf), RING (Staubring vorher), JZ (Strahlen steiler), SZM (Groessenfaktor), DDELAY (Belag erst spaeter); Standardwerte = Runde 9 (v0.4); v0.4: Deposit-Farbe repariert, FRAMES-Liste, feiner Staub statt grosser Koerner; v0.3: Nahbereich-Maszstab (wenige grosse Koepfe, grobe Koerner aus simT_a8e, Tiefenschaerfe, Bewegungsunschaerfe, schnellerer Stoss/Absetzen); dicker/opaker (mehr Dichte, laengere Quelle), neutrales weisses Licht, symmetrische Strahlen (weniger Drift), Deposit waechst mit dem Aufprall, Domain strikt im Quadrat; v0.2: GRAIN (Korn in der Dichte), mehr Aufloesung moeglich; v0.1: Mantaflow-Rauch fuer genau einen Schlag (Schlag 1, Gelb #E3A21A, p=[-0.5,0.42] aus takt-a8.json)
 # Aufruf: blender -b --python flow_test.py -- AUSGABEORDNER [bake|render|all] [VON-BIS]
 # Gleiche Szene wie scene.py (Logo, Kamera von oben, Licht), Domain nur ueber dem Quadrat. Umgebung (alle optional):
 #   RES=96 Aufloesung der Rauch-Zellen (laengste Seite)   NOISE=2 Noise-Upres (0 = aus)   VORT=0.35 Vorticity   NSCALE=2.0 Noise-Groesse
@@ -45,14 +45,16 @@ except Exception: pass
 import random
 rng = random.Random(int(E('SEED', '7')))
 VEL = float(E('VEL', '16')); NR = int(E('NR', '8')); BC = int(E('BURSTC', '9')); BJ = int(E('BURSTJ', '3'))
+S0 = int(E('S0', '1')); SZM = float(E('SZM', '1.0')); JZ = float(E('JZ', '-0.25')); ST = 0
 def quelle(name, r, loc, vel, vnorm, dens, frames):
     bpy.ops.mesh.primitive_uv_sphere_add(radius=r, location=loc, segments=16, ring_count=8); o = bpy.context.active_object; o.name = name
     mf = o.modifiers.new('fluid', 'FLUID'); mf.fluid_type = 'FLOW'; fs = mf.flow_settings
     fs.flow_type = 'SMOKE'; fs.flow_behavior = 'INFLOW'; fs.flow_source = 'MESH'
     fs.smoke_color = lin; fs.density = dens; fs.surface_distance = 1.0
     fs.use_initial_velocity = True; fs.velocity_normal = vnorm; fs.velocity_coord = vel
-    fs.use_inflow = True; fs.keyframe_insert('use_inflow', frame=1)
-    fs.use_inflow = False; fs.keyframe_insert('use_inflow', frame=1 + frames)
+    if S0 > 1: fs.use_inflow = False; fs.keyframe_insert('use_inflow', frame=1)
+    fs.use_inflow = True; fs.keyframe_insert('use_inflow', frame=ST if ST else S0)
+    fs.use_inflow = False; fs.keyframe_insert('use_inflow', frame=(ST if ST else S0) + frames)
     o.hide_render = True
 BASEV = [rng.uniform(0.55, 1.5) * (1.0 + 0.5 * (rng.random() < 0.25)) for _ in range(NR // 2)]   # einzelne Strahlen schiessen weit vor
 CL = int(E('CORECL', '1'))   # v0.4: Kern als unregelmaessiger Haufen kleiner Quellen statt einer glatten Kugel
@@ -67,7 +69,13 @@ for i in range(NR):
     th = 2 * math.pi * (i + rng.uniform(-0.35, 0.35)) / NR
     base = BASEV[i % (NR // 2)]   # Gegenueber-Paare teilen die Grundgeschwindigkeit: kein Drift in eine Richtung
     v = VEL * base * rng.uniform(0.88, 1.12)
-    quelle('Strahl%d' % i, 0.07, (px + math.cos(th) * 0.05, py + math.sin(th) * 0.05, 0.12), (math.cos(th) * v, math.sin(th) * v, -0.25 * v), 0.0, float(E('JETDENS', '3.5')), BJ)
+    quelle('Strahl%d' % i, 0.07 * SZM, (px + math.cos(th) * 0.05, py + math.sin(th) * 0.05, 0.12), (math.cos(th) * v, math.sin(th) * v, JZ * v), 0.0, float(E('JETDENS', '3.5')), BJ)
+if E('RING', '0') == '1':   # Vorbote: feiner Staubring 3 Bilder vor dem Durchbruch (ohne Zufallszahlen, Rest bleibt wie Runde 9)
+    ST = max(1, S0 - 3)
+    for k in range(10):
+        a = 2 * math.pi * k / 10
+        quelle('Ring%d' % k, 0.03, (px + math.cos(a) * 0.08, py + math.sin(a) * 0.08, 0.03), (math.cos(a) * VEL * 0.25, math.sin(a) * VEL * 0.25, VEL * 0.03), 0.0, float(E('RINGD', '0.5')), 3)
+    ST = 0
 
 # Material der Domain: Principled Volume, Dichte und Farbe aus dem Rauch
 m = bpy.data.materials.new('Rauch'); m.use_nodes = True; nt = m.node_tree
@@ -126,8 +134,8 @@ if SIM:
     pn.links.new(da.outputs[0], mx.inputs['Factor']); pn.links.new(gn_.outputs['Result'], mx.inputs['B']); pn.links.new(mx.outputs['Result'], pb.inputs['Base Color'])
 def set_deposit(f):
     if imgD is None: return
-    dr.outputs[0].default_value = max(0.0, min(1.0, (f - 1) / float(E('DRAMP', '14')))) ** 1.5   # Deposit waechst erst mit dem Aufprall (Bild 1 = Stoss)
-    k = min(int(E('DEP0', '60')) + 2 * (f - 1), int(E('DEP1', '110')))   # Sim-Bild: Schlag 1 bei Sim-Bild 60, Schlag 2 ab 112
+    dr.outputs[0].default_value = max(0.0, min(1.0, (f - S0 - float(E('DDELAY', '0'))) / float(E('DRAMP', '14')))) ** 1.5   # Deposit waechst erst mit dem Aufprall (Bild 1 = Stoss)
+    k = min(int(E('DEP0', '60')) + 2 * max(f - S0, 0), int(E('DEP1', '110')))   # Sim-Bild: Schlag 1 bei Sim-Bild 60, Schlag 2 ab 112
     pth = os.path.join(SIM, 'dep_%04d.png' % k)
     if os.path.exists(pth):
         if imgD.image: bpy.data.images.remove(imgD.image)
@@ -158,7 +166,7 @@ ob_p.modifiers.new('pp', 'NODES').node_group = gt
 pm = bpy.data.materials.new('Koerner'); pm.use_nodes = True; pbs = pm.node_tree.nodes['Principled BSDF']
 pbs.inputs['Base Color'].default_value = (*lin, 1); pbs.inputs['Roughness'].default_value = 0.9; sm_.inputs['Material'].default_value = pm
 def set_particles(f):
-    k = min(int(E('DEP0', '60')) + 2 * (f - 1), 202)
+    k = min(int(E('DEP0', '60')) + 2 * max(f - S0, 0), 202)
     pth = os.path.join(SIM, 'pts_%04d.npz' % k) if SIM else ''
     me_p.clear_geometry()
     if not pth or not os.path.exists(pth): return
@@ -197,7 +205,7 @@ def apply_look(lk):   # v0.4: Look-Varianten (Farbe, Licht, Deposit, Staub) auf 
 
 if MODE in ('render', 'all'):
     LOOKS = json.loads(E('LOOKS', '[{}]'))
-    FL = [int(v) for v in E('FRAMES').split(',')] if E('FRAMES') else list(range(RA[0], RA[1] + 1))
+    FL = [int(v) for v in E('FRAMES').split(',') if v.strip()] if E('FRAMES') else list(range(RA[0], RA[1] + 1))
     for vi, lk in enumerate(LOOKS):
         apply_look(lk)
         od = OUT if len(LOOKS) == 1 else os.path.join(OUT, 'v%d' % vi)
