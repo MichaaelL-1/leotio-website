@@ -1,4 +1,4 @@
-# Leotio Studios Flow-Story v0.1 · 28.11.2026: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
+# Leotio Studios Flow-Story v0.2 · 28.11.2026: ERMODE=wide|tight (Quellenanordnung); ERUPT=1 Eruption aus einem Punkt (kein Strom von der Seite), Papier-Vorbote (Aufwoelbung); v0.1: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
 # Aufruf: blender -b --python flow_story.py -- AUSGABEORDNER [bake|render|all]
 # Umgebung (optional): TF=228 Bilder (24 fps)  RES=160  RX=640 RY=360 SPP=16  SIM=<simT_a8e>  HITS=0,1,2,3,4,5 (Auswahl)  FRAMES=Liste (nur diese Bilder rendern)
 #   SF=4 Anlaufbilder (Strom von der Seite)  WIN=50 Fenster je Domain  SLOW=0.35 Zeitlupenfaktor  SLOWF=12 Zeitlupenbilder  DOFN=0.15  DW=3.2 DH=1.2
@@ -47,12 +47,58 @@ if SIM:
     gn_.inputs['B'].default_value = (1.2, 1.2, 1.2, 1); pn.links.new(imgD.outputs['Color'], gn_.inputs['A'])
     mx = pn.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.inputs['A'].default_value = (0.90, 0.905, 0.905, 1)
     pn.links.new(imgD.outputs['Alpha'], mx.inputs['Factor']); pn.links.new(gn_.outputs['Result'], mx.inputs['B']); pn.links.new(mx.outputs['Result'], pb.inputs['Base Color'])
+ERUPT = E('ERUPT', '1') == '1'
+def bump_pulse(px, py, fi, name):   # Vorbote: Papier woelbt sich unter dem Einschlagpunkt kurz auf (nur Schattierung)
+    old = [l for l in pn.links if l.to_socket == pb.inputs['Normal']]
+    src = old[0].from_socket if old else None
+    gp = pn.nodes.new('ShaderNodeNewGeometry'); spp = pn.nodes.new('ShaderNodeSeparateXYZ'); pn.links.new(gp.outputs['Position'], spp.inputs[0])
+    dx = pn.nodes.new('ShaderNodeMath'); dx.operation = 'SUBTRACT'; dx.inputs[1].default_value = px; pn.links.new(spp.outputs['X'], dx.inputs[0])
+    dy = pn.nodes.new('ShaderNodeMath'); dy.operation = 'SUBTRACT'; dy.inputs[1].default_value = py; pn.links.new(spp.outputs['Y'], dy.inputs[0])
+    dx2 = pn.nodes.new('ShaderNodeMath'); dx2.operation = 'MULTIPLY'; pn.links.new(dx.outputs[0], dx2.inputs[0]); pn.links.new(dx.outputs[0], dx2.inputs[1])
+    dy2 = pn.nodes.new('ShaderNodeMath'); dy2.operation = 'MULTIPLY'; pn.links.new(dy.outputs[0], dy2.inputs[0]); pn.links.new(dy.outputs[0], dy2.inputs[1])
+    r2 = pn.nodes.new('ShaderNodeMath'); r2.operation = 'ADD'; pn.links.new(dx2.outputs[0], r2.inputs[0]); pn.links.new(dy2.outputs[0], r2.inputs[1])
+    den = pn.nodes.new('ShaderNodeMath'); den.operation = 'MULTIPLY_ADD'; den.inputs[1].default_value = float(E('DOMEK', '40')); den.inputs[2].default_value = 1.0; pn.links.new(r2.outputs[0], den.inputs[0])
+    hh = pn.nodes.new('ShaderNodeMath'); hh.operation = 'DIVIDE'; hh.inputs[0].default_value = 1.0; pn.links.new(den.outputs[0], hh.inputs[1])
+    amp = pn.nodes.new('ShaderNodeValue'); amp.name = name; amp.outputs[0].default_value = 0.0
+    hm = pn.nodes.new('ShaderNodeMath'); hm.operation = 'MULTIPLY'; pn.links.new(hh.outputs[0], hm.inputs[0]); pn.links.new(amp.outputs[0], hm.inputs[1])
+    bp = pn.nodes.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 1.0; bp.inputs['Distance'].default_value = 0.05; pn.links.new(hm.outputs[0], bp.inputs['Height'])
+    if src is not None: pn.links.new(src, bp.inputs['Normal'])
+    pn.links.new(bp.outputs['Normal'], pb.inputs['Normal'])
+    PRE = int(E('PRE', '4'))
+    for fr, v in ((1, 0.0), (max(1, fi - PRE), 0.0), (fi - 1, 1.0), (fi, 1.0), (fi + 2, 0.0)):   # waechst ueber PRE Bilder, faellt mit dem Durchbruch
+        amp.outputs[0].default_value = v; amp.outputs[0].keyframe_insert('default_value', frame=fr)
 def set_deposit(f):
     if imgD is None: return
     pth = os.path.join(SIM, 'dep_%04d.png' % min(2 * (f - 1), 575))   # Filmbild n = f-1, Sim-Bild = 2n
     if os.path.exists(pth):
         if imgD.image: bpy.data.images.remove(imgD.image)
         imgD.image = bpy.data.images.load(pth); imgD.image.colorspace_settings.name = 'sRGB'
+
+# --- Feinstaub: Partikel aus simT_a8e in ihrer Farbe, nur im Quadrat, stark ausgeduennt
+import numpy as np
+PR = float(E('PR', '1.0')); PSUB = int(E('PSUB', '40'))
+me_p = bpy.data.meshes.new('Staub'); ob_p = bpy.data.objects.new('Staub', me_p); bpy.context.collection.objects.link(ob_p)
+gt = bpy.data.node_groups.new('StaubPunkte', 'GeometryNodeTree')
+gt.interface.new_socket('Geometry', in_out='INPUT', socket_type='NodeSocketGeometry'); gt.interface.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
+gi_ = gt.nodes.new('NodeGroupInput'); go_ = gt.nodes.new('NodeGroupOutput'); m2 = gt.nodes.new('GeometryNodeMeshToPoints')
+na_ = gt.nodes.new('GeometryNodeInputNamedAttribute'); na_.data_type = 'FLOAT'; na_.inputs['Name'].default_value = 'rad'; sm_ = gt.nodes.new('GeometryNodeSetMaterial')
+gt.links.new(gi_.outputs[0], m2.inputs['Mesh']); gt.links.new(na_.outputs['Attribute'], m2.inputs['Radius']); gt.links.new(m2.outputs['Points'], sm_.inputs['Geometry']); gt.links.new(sm_.outputs['Geometry'], go_.inputs[0])
+ob_p.modifiers.new('pp', 'NODES').node_group = gt
+pm = bpy.data.materials.new('Staub'); pm.use_nodes = True; pbs = pm.node_tree.nodes['Principled BSDF']
+at_ = pm.node_tree.nodes.new('ShaderNodeAttribute'); at_.attribute_name = 'col'; at_.attribute_type = 'GEOMETRY'
+pm.node_tree.links.new(at_.outputs['Color'], pbs.inputs['Base Color']); pbs.inputs['Roughness'].default_value = 0.9; sm_.inputs['Material'].default_value = pm
+def set_particles(f):
+    me_p.clear_geometry()
+    if not SIM or PSUB <= 0: return
+    pth = os.path.join(SIM, 'pts_%04d.npz' % min(2 * (f - 1), 575))
+    if not os.path.exists(pth): return
+    z = np.load(pth); P = z['p']; C = z['c'].astype(np.float32); R = z['r'].astype(np.float32)
+    sel = (np.abs(P[:, 0]) < 0.97) & (np.abs(P[:, 1]) < 0.97)
+    idx = np.nonzero(sel)[0][::PSUB]
+    if len(idx) == 0: return
+    me_p.vertices.add(len(idx)); me_p.vertices.foreach_set('co', P[idx].ravel())
+    a_ = me_p.attributes.new('rad', 'FLOAT', 'POINT'); a_.data.foreach_set('value', R[idx] * PR)
+    c_ = me_p.attributes.new('col', 'FLOAT_COLOR', 'POINT'); c_.data.foreach_set('color', np.concatenate([C[idx], np.ones((len(idx), 1), np.float32)], 1).ravel()); me_p.update()
 
 # --- Wuerfe
 RES = int(E('RES', '160')); DW = float(E('DW', '3.2')); DH = float(E('DH', '1.2')); SF = int(E('SF', '4')); WIN = int(E('WIN', '50'))
@@ -69,8 +115,8 @@ doms = {}
 def material(i, name):
     c = PAL[hits[i]['c']]; L = lin3(c)
     yellow = hits[i]['c'] == 0
-    cm = [1, 0.65, 0.3] if yellow else [1, 1, 1]; mx_ = max(L)
-    ac = [0.92, 0.7, 0.2] if yellow else [1 - 0.8 * (1 - l / mx_) for l in L]   # Absorption nach Pigmentfarbe: Rest-Kanaele werden geschluckt, Schatten bleiben neutral
+    cm = [1, 0.72, 0.32] if yellow else [1, 1, 1]; mx_ = max(L)
+    ac = [0.93, 0.74, 0.26] if yellow else [1 - 0.8 * (1 - l / mx_) for l in L]   # Absorption nach Pigmentfarbe: Rest-Kanaele werden geschluckt, Schatten bleiben neutral
     m = bpy.data.materials.new(name); m.use_nodes = True; nt = m.node_tree
     for n in list(nt.nodes): nt.nodes.remove(n)
     out = nt.nodes.new('ShaderNodeOutputMaterial'); pv = nt.nodes.new('ShaderNodeVolumePrincipled')
@@ -132,18 +178,32 @@ def build_hit(i):
     if h.get('wd'): th = math.radians(h['wd'][0])
     dv = (math.cos(th), math.sin(th)); sz = SZ[i] if i < len(SZ) else 1.0
     VEL = float(E('VEL', '17')) * (0.85 + 0.15 * sz); SL = float(E('STREAML', '0.9'))
-    st = quelle(dom, 'Strom%d' % i, 0.07, (px - dv[0] * SL, py - dv[1] * SL, 0.15), (dv[0] * VEL * 0.9, dv[1] * VEL * 0.9, -0.1 * VEL), 0.0, float(E('STREAMD', '2.0')), max(1, fi - SF), SF + 1)
-    st.location = (px - dv[0] * SL, py - dv[1] * SL, 0.15); st.keyframe_insert('location', frame=max(1, fi - SF))
-    st.location = (px, py, 0.13); st.keyframe_insert('location', frame=fi)
+    if not ERUPT: st = quelle(dom, 'Strom%d' % i, 0.07, (px - dv[0] * SL, py - dv[1] * SL, 0.15), (dv[0] * VEL * 0.9, dv[1] * VEL * 0.9, -0.1 * VEL), 0.0, float(E('STREAMD', '2.0')), max(1, fi - SF), SF + 1)
+    if not ERUPT:
+        st.location = (px - dv[0] * SL, py - dv[1] * SL, 0.15); st.keyframe_insert('location', frame=max(1, fi - SF))
+        st.location = (px, py, 0.13); st.keyframe_insert('location', frame=fi)
+    else:
+        bump_pulse(px, py, fi, 'dome%d' % i)
     CR = float(E('CORER', '0.28')) * sz; CD = float(E('COREDENS', '2.5')); CV = VEL * 0.22
     for ci in range(int(E('CORECL', '9'))):
         a_, b_, c_ = rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.4, 0.4); nn = max(math.sqrt(a_ * a_ + b_ * b_), 1e-3)
-        quelle(dom, 'Kern%d_%d' % (i, ci), CR * rng.uniform(0.4, 0.7), (px + a_ / nn * CR * 0.8 * rng.random(), py + b_ / nn * CR * 0.8 * rng.random(), 0.14 + c_ * 0.05),
-               (dv[0] * VEL * 0.25, dv[1] * VEL * 0.25, -VEL * 0.15), CV * rng.uniform(0.6, 1.4), CD * rng.uniform(0.8, 1.2), fi, 6 + rng.randint(-2, 2))
+        if ERUPT and E('ERMODE', 'wide') == 'wide':   # breite Anordnung wie Runde 9 (Haufen aus Quellen), nur mit Aufwaertsimpuls
+            quelle(dom, 'Kern%d_%d' % (i, ci), CR * rng.uniform(0.4, 0.7), (px + a_ / nn * CR * 0.8 * rng.random(), py + b_ / nn * CR * 0.8 * rng.random(), 0.12 + abs(c_) * 0.05),
+                   (dv[0] * VEL * 0.1, dv[1] * VEL * 0.1, VEL * float(E('UP', '0.4')) * rng.uniform(0.5, 1.1)), CV * rng.uniform(0.6, 1.4), CD * rng.uniform(0.8, 1.2), fi, 6 + rng.randint(-2, 2))
+        elif ERUPT:   # Punktquelle knapp ueber der Flaeche, Geschwindigkeit nach oben (Kegel), leicht gekippt in Wurfrichtung
+            quelle(dom, 'Kern%d_%d' % (i, ci), CR * rng.uniform(0.25, 0.45), (px + a_ / nn * CR * 0.25 * rng.random(), py + b_ / nn * CR * 0.25 * rng.random(), 0.05 + abs(c_) * 0.03),
+                   (dv[0] * VEL * 0.12 + a_ * VEL * 0.15, dv[1] * VEL * 0.12 + b_ * VEL * 0.15, VEL * float(E('UP', '0.55')) * rng.uniform(0.7, 1.3)), CV * 0.4, CD * rng.uniform(1.2, 1.8), fi, 5 + rng.randint(-1, 2))
+        else:
+            quelle(dom, 'Kern%d_%d' % (i, ci), CR * rng.uniform(0.4, 0.7), (px + a_ / nn * CR * 0.8 * rng.random(), py + b_ / nn * CR * 0.8 * rng.random(), 0.14 + c_ * 0.05),
+                   (dv[0] * VEL * 0.25, dv[1] * VEL * 0.25, -VEL * 0.15), CV * rng.uniform(0.6, 1.4), CD * rng.uniform(0.8, 1.2), fi, 6 + rng.randint(-2, 2))
     NR = int(E('NR', '12')); BASEV = [rng.uniform(0.55, 1.5) * (1.0 + 0.5 * (rng.random() < 0.25)) for _ in range(NR // 2)]
     for j in range(NR):
         a = 2 * math.pi * (j + rng.uniform(-0.35, 0.35)) / NR; v = VEL * BASEV[j % (NR // 2)] * rng.uniform(0.88, 1.12) * (1 + 0.55 * math.cos(a - th))   # in Wurfrichtung staerker
-        quelle(dom, 'Strahl%d_%d' % (i, j), 0.07, (px + math.cos(a) * 0.05, py + math.sin(a) * 0.05, 0.12), (math.cos(a) * v, math.sin(a) * v, -0.25 * v), 0.0, float(E('JETDENS', '2.2')), fi, 2)
+        quelle(dom, 'Strahl%d_%d' % (i, j), 0.06, (px + math.cos(a) * 0.04, py + math.sin(a) * 0.04, 0.06 if ERUPT else 0.12), (math.cos(a) * v, math.sin(a) * v, (float(E('JETUP', '0.5')) * v * rng.uniform(0.4, 1.2)) if ERUPT else -0.25 * v), 0.0, float(E('JETDENS', '2.2')), fi, 2)
+    if ERUPT:   # Vorbote: feiner Staubring laeuft ueber die Flaeche, bevor der Durchbruch kommt
+        for k in range(10):
+            a = 2 * math.pi * k / 10
+            quelle(dom, 'Ring%d_%d' % (i, k), 0.03, (px + math.cos(a) * 0.08, py + math.sin(a) * 0.08, 0.03), (math.cos(a) * VEL * 0.25, math.sin(a) * VEL * 0.25, VEL * 0.03), 0.0, float(E('RINGD', '0.5')), max(1, fi - 3), 3)
     doms[i] = dom
 for i in SEL: build_hit(i)
 
@@ -156,10 +216,10 @@ if MODE in ('bake', 'all'):
         doms[i].select_set(True)
         t1 = time.time(); bpy.ops.fluid.bake_data(); print('BAKE', i, round(time.time() - t1, 1), 's', flush=True)
 if MODE in ('render', 'all'):
-    FL = [int(v) for v in E('FRAMES').split(',')] if E('FRAMES') else list(range(1, TF + 1))
+    FL = [int(v) for v in E('FRAMES').split(',') if v.strip()] if E('FRAMES') else list(range(1, TF + 1))
     os.makedirs(os.path.join(OUT, 'f'), exist_ok=True)
     for f in FL:
-        t1 = time.time(); sc.frame_set(f); set_deposit(f); sc.render.filepath = os.path.join(OUT, 'f', 'f_%04d.png' % f); bpy.ops.render.render(write_still=True)
+        t1 = time.time(); sc.frame_set(f); set_deposit(f); set_particles(f); sc.render.filepath = os.path.join(OUT, 'f', 'f_%04d.png' % f); bpy.ops.render.render(write_still=True)
         print('BILD', f, round(time.time() - t1, 1), 's', flush=True)
     if imgD is not None:   # Maske-Referenz: leeres Papier ohne Deposit
         leer = bpy.data.images.new('leer', 4, 4, alpha=True); leer.pixels = [0.0] * (4 * 4 * 4); leer.colorspace_settings.name = 'sRGB'
