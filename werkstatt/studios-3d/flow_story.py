@@ -1,4 +1,4 @@
-# Leotio Studios Flow-Story v0.3 · 28.11.2026: DEPRAMP (Belag waechst erst mit dem Absinken, nur fuer Einzelwurf-Tests), laengeres Stehen (DISS), Licht wie Runde 9; v0.2: ERMODE=wide|tight (Quellenanordnung); ERUPT=1 Eruption aus einem Punkt (kein Strom von der Seite), Papier-Vorbote (Aufwoelbung); v0.1: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
+# Leotio Studios Flow-Story v0.4 · 28.11.2026: FADE0/FADE1 weicher Ausblendverlauf statt Mantaflow-Dissolve (verschwand bei schnellen Stoessen in 4 Bildern), Korn-Regler G1A/G1S/G2A/G2S; v0.3: DEPRAMP (Belag waechst erst mit dem Absinken, nur fuer Einzelwurf-Tests), laengeres Stehen (DISS), Licht wie Runde 9; v0.2: ERMODE=wide|tight (Quellenanordnung); ERUPT=1 Eruption aus einem Punkt (kein Strom von der Seite), Papier-Vorbote (Aufwoelbung); v0.1: alle 6 Wuerfe aus takt-a8.json als Mantaflow-Rauch (eine Domain je Wurf), Wurf von der Seite, Zeitlupe im Einschlag, gestaffelte Groessen, weiches Licht, Tiefenschaerfe. Basis: flow_test.py v0.4 (Runde 9).
 # Aufruf: blender -b --python flow_story.py -- AUSGABEORDNER [bake|render|all]
 # Umgebung (optional): TF=228 Bilder (24 fps)  RES=160  RX=640 RY=360 SPP=16  SIM=<simT_a8e>  HITS=0,1,2,3,4,5 (Auswahl)  FRAMES=Liste (nur diese Bilder rendern)
 #   SF=4 Anlaufbilder (Strom von der Seite)  WIN=50 Fenster je Domain  SLOW=0.35 Zeitlupenfaktor  SLOWF=12 Zeitlupenbilder  DOFN=0.15  DW=3.2 DH=1.2
@@ -133,7 +133,7 @@ def material(i, name):
         nz = nt.nodes.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = scale; nz.inputs['Detail'].default_value = 8
         ga = nt.nodes.new('ShaderNodeMath'); ga.operation = 'MULTIPLY_ADD'; ga.use_clamp = True; ga.inputs[1].default_value = 1.6 * amp; ga.inputs[2].default_value = 1.0 - 0.8 * amp
         nt.links.new(tc.outputs['Object'], nz.inputs['Vector']); nt.links.new(nz.outputs['Fac'], ga.inputs[0]); return ga
-    g1, g2 = noise(40, 1.0), noise(130, 0.7)
+    g1, g2 = noise(float(E('G1S', '40')), float(E('G1A', '1.0'))), noise(float(E('G2S', '130')), float(E('G2A', '0.7')))
     m1 = nt.nodes.new('ShaderNodeMath'); m1.operation = 'MULTIPLY'; nt.links.new(ad.outputs['Fac'], m1.inputs[0]); nt.links.new(g1.outputs[0], m1.inputs[1])
     m2 = nt.nodes.new('ShaderNodeMath'); m2.operation = 'MULTIPLY'; nt.links.new(m1.outputs[0], m2.inputs[0]); nt.links.new(g2.outputs[0], m2.inputs[1])
     fade = nt.nodes.new('ShaderNodeValue'); fade.name = 'fade'; fade.outputs[0].default_value = float(E('DENS', '100'))
@@ -172,7 +172,9 @@ def build_hit(i):
             ds.time_scale = v; ds.keyframe_insert('time_scale', frame=fr)
     m, fade = material(i, 'Rauch%d' % i); dom.data.materials.append(m)
     base = float(E('DENS', '100')); fade.outputs[0].default_value = base
-    for fr, v in ((1, base), (e - 8, base), (e, 0.0)):   # Ausblenden am Fensterende (verhindert hartes Abschneiden)
+    F0, F1 = int(E('FADE0', '0')), int(E('FADE1', '0'))   # weicher Ausblendverlauf nach dem Einschlag (0 = erst am Fensterende)
+    keys = ((1, base), (fi + F0, base), (fi + F1, 0.0)) if F1 > 0 else ((1, base), (e - 8, base), (e, 0.0))
+    for fr, v in keys:
         fade.outputs[0].default_value = v; fade.outputs[0].keyframe_insert('default_value', frame=fr)
     # Sichtbarkeit der Domain nur im Fenster
     dom.hide_render = True; dom.keyframe_insert('hide_render', frame=1)
