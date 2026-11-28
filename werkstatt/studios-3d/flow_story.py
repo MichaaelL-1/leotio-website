@@ -73,7 +73,7 @@ DEPRAMP = E('DEPRAMP', '0') == '1'
 def set_deposit(f):
     if imgD is None: return
     if DEPRAMP:   # Einzelwurf-Test: Belag erst D0 Bilder nach dem Einschlag, waechst ueber D1 Bilder (mit dem Absinken der Wolke)
-        x = (f - fi_[SEL[0]] - float(E('DEPD0', '8'))) / float(E('DEPD1', '34')); dram.outputs[0].default_value = max(0.0, min(1.0, x)) ** 1.5
+        x = (f - fi_[SEL[0]] - float(E('DEPD0', '8'))) / float(E('DEPD1', '34')); f0 = float(E('DEP0F', '0.0')); dram.outputs[0].default_value = f0 + (1.0 - f0) * max(0.0, min(1.0, x)) ** 1.5   # DEP0F: schwacher Sockel, damit die Staubstrahlen beim Durchbruch sichtbar bleiben
     pth = os.path.join(SIM, 'dep_%04d.png' % min(2 * (f - 1), 575))   # Filmbild n = f-1, Sim-Bild = 2n
     if os.path.exists(pth):
         if imgD.image: bpy.data.images.remove(imgD.image)
@@ -160,7 +160,8 @@ def build_hit(i):
     for sd in ('top', 'front', 'back', 'left', 'right'):
         try: setattr(ds, 'use_collision_border_' + sd, False)
         except Exception: pass
-    ds.use_dissolve_smoke = True; ds.dissolve_speed = DISS; ds.use_dissolve_smoke_log = False
+    ds.use_dissolve_smoke = DISS > 0   # v0.4: DISS=0 bedeutet aus (vorher: Geschwindigkeit 0 = sofort aufgeloest, Wolke verschwand in 5 Bildern)
+    if DISS > 0: ds.dissolve_speed = DISS; ds.use_dissolve_smoke_log = False
     ds.cache_directory = os.path.join(OUT, 'cache', 'h%d' % i); os.makedirs(ds.cache_directory, exist_ok=True)
     ds.cache_frame_start, ds.cache_frame_end = s, e
     try: ds.cache_type = 'ALL'
